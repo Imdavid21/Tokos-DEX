@@ -1,5 +1,9 @@
-import { OneDeltaClient } from './client'
 import type { OneDeltaSpotSwapRequest, TokosSwapExecution, TokosSwapQuote } from './types'
+
+export interface OneDeltaSwapClient {
+  getSpotQuote(input: Omit<OneDeltaSpotSwapRequest, 'account'>): Promise<TokosSwapQuote>
+  buildSpotSwap(input: OneDeltaSpotSwapRequest & { account: `0x${string}` }): Promise<TokosSwapExecution>
+}
 
 export interface SwapProvider {
   getQuote(input: Omit<OneDeltaSpotSwapRequest, 'account'>): Promise<TokosSwapQuote>
@@ -7,7 +11,7 @@ export interface SwapProvider {
 }
 
 export class OneDeltaSwapProvider implements SwapProvider {
-  constructor(private readonly client: OneDeltaClient) {}
+  constructor(private readonly client: OneDeltaSwapClient) {}
 
   getQuote(input: Omit<OneDeltaSpotSwapRequest, 'account'>): Promise<TokosSwapQuote> {
     return this.client.getSpotQuote(input)
