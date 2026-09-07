@@ -6,26 +6,38 @@
   <meta name="theme-color" content="#ffffff">
   <title>Tokos DEX</title>
   <meta name="description" content="Swap tokens through Tokos on Ethereum.">
-  <link rel="icon" href="/icon.svg?v=dex4" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=dex4">
-  <script defer src="/app.js?v=dex4"></script>
+  <link rel="icon" href="/icon.svg?v=dex5" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css?v=dex5">
+  <script defer src="/breakdown.js?v=dex5"></script>
+  <script defer src="/app.js?v=dex5"></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex4" alt=""><span>tokos</span><i>.fun</i></a>
+    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex5" alt=""><span>tokos</span><i>.fun</i></a>
     <nav aria-label="Tokos navigation"><a href="https://tokos.fun/app/">Yield</a><a class="active" href="/dex">DEX</a><a href="https://tokos.fun/portfolio/">Portfolio</a><a href="https://tokos.fun/activity/">Activity</a><a href="https://tokos.fun/learn/">Learn</a></nav>
     <button id="wallet-top" class="wallet-button">Connect wallet</button>
   </header>
 
-  <main class="dex-shell">
-    <section class="market-panel" aria-label="Token market">
-      <div class="market-head">
-        <div class="market-token"><span id="chart-token-icon" class="market-icon"><span>W</span></span><div><strong id="chart-token-symbol">WETH</strong><span id="chart-token-name">Wrapped Ether</span></div></div>
-        <div class="market-price"><strong id="chart-price">—</strong><span id="chart-change">—</span></div>
-        <div class="chart-ranges" aria-label="Chart range"><button data-range="1">24H</button><button data-range="7">7D</button><button class="active" data-range="30">30D</button><button data-range="180">6M</button></div>
+  <main class="dex-shell data-layout">
+    <section class="data-panel" aria-label="Execution data">
+      <div class="data-panel-head">
+        <div><span class="eyebrow">Execution data</span><h1>Best route breakdown</h1><p>Live quote candidates and transaction data returned for your trade.</p></div>
+        <div id="api-summary" class="api-summary"><div><span>Quotes returned</span><strong>—</strong></div><div><span>Best source</span><strong>—</strong></div><div><span>Status</span><strong>Waiting</strong></div></div>
       </div>
-      <div class="chart-stage"><svg id="price-chart" viewBox="0 0 900 360" preserveAspectRatio="none" aria-label="Token price chart"><defs><linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5b12" stop-opacity=".14"/><stop offset="1" stop-color="#ff5b12" stop-opacity="0"/></linearGradient></defs><g id="chart-grid"><line x1="0" y1="72" x2="900" y2="72"/><line x1="0" y1="180" x2="900" y2="180"/><line x1="0" y1="288" x2="900" y2="288"/></g><path id="chart-area"></path><path id="chart-line"></path></svg><div id="chart-empty" class="chart-empty">Loading market data…</div></div>
-      <div class="market-stats"><div><span>Range high</span><strong id="stat-high">—</strong></div><div><span>Range low</span><strong id="stat-low">—</strong></div><div><span>24h volume</span><strong id="stat-volume">—</strong></div><div><span>Market cap</span><strong id="stat-marketcap">—</strong></div></div>
+
+      <div id="api-breakdown" class="api-breakdown empty">
+        <div id="api-quote-list" class="api-quote-list"><div class="api-empty">Enter an amount to compare available routes.</div></div>
+        <div id="api-execution" class="api-execution hidden"></div>
+        <div id="api-benchmark" class="api-benchmark hidden"><details><summary>Direct market benchmark</summary><pre></pre></details></div>
+        <details class="raw-response"><summary>Raw quote response</summary><pre id="api-raw">No quote loaded.</pre></details>
+        <details class="raw-response"><summary>Raw execution response</summary><pre id="api-build-raw">Execution data appears after transaction preparation.</pre></details>
+      </div>
+
+      <div class="hidden" aria-hidden="true">
+        <span id="chart-token-icon"></span><strong id="chart-token-symbol"></strong><span id="chart-token-name"></span><strong id="chart-price"></strong><span id="chart-change"></span>
+        <svg><path id="chart-line"></path><path id="chart-area"></path></svg><div id="chart-empty"></div><strong id="stat-high"></strong><strong id="stat-low"></strong><strong id="stat-volume"></strong><strong id="stat-marketcap"></strong>
+        <button data-range="30" class="active"></button>
+      </div>
     </section>
 
     <aside class="trade-column"><section class="swap-card" aria-label="Swap tokens">
