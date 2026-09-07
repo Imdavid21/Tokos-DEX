@@ -51,71 +51,66 @@ V1 implementation:
 class OneDeltaSwapProvider implements SwapProvider
 ```
 
-This preserves the option to add other providers later without rebuilding the UI.
+The browser implementation uses `TokosOneDeltaBffClient`, so 1delta credentials never enter the client bundle. This preserves the option to add other providers later without rebuilding the UI.
 
 ## Server API
-Expose normalized Tokos endpoints rather than exposing 1delta response formats directly.
+Tokos exposes narrow backend-for-frontend routes and never exposes the 1delta API key to browser code.
 
-### GET /api/quote
-Input:
+### GET /api/tokos/quote
+Input query parameters:
 - chainId
 - tokenIn
 - tokenOut
-- amount
-- slippageBps
+- amount, as an integer in token base units
+- slippage, in basis points
 
-Output:
-```json
-{
-  "tokenIn": {},
-  "tokenOut": {},
-  "amountIn": "",
-  "amountOut": "",
-  "amountOutMin": "",
-  "priceImpact": "",
-  "gasEstimate": "",
-  "route": {},
-  "alternatives": [],
-  "expiresAt": ""
-}
-```
+The server always omits `account` upstream for this route. 1delta therefore returns a quote-only response with `actions: null`.
 
-Quote-only requests should not include an account unless required by 1delta for the requested action.
+### GET /api/tokos/swap/build
+Input query parameters:
+- chainId
+- account
+- tokenIn
+- tokenOut
+- amount, as an integer in token base units
+- slippage, in basis points
 
-### POST /api/swap/build
-Input:
-```json
-{
-  "chainId": 1,
-  "account": "0x...",
-  "tokenIn": "0x...",
-  "tokenOut": "0x...",
-  "amount": "...",
-  "slippageBps": 50
-}
-```
+The server requires a valid EVM account and includes it in the upstream 1delta request so executable actions are returned.
 
-The backend calls 1delta and normalizes required permissions and execution transactions.
+The server validates all accepted parameters, forwards only those parameters, sends the optional `x-api-key` server-side, disables caching, and uses a fixed 1delta origin to avoid becoming an arbitrary proxy.
 
-## Execution flow
-1. User enters trade.
-2. Tokos fetches quote.
-3. User clicks Swap.
-4. Tokos rebuilds an execution-ready request with the connected account.
-5. If permissions are required, execute them first.
-6. Wait for required approval confirmation.
-7. Execute exactly one swap route.
-8. Track receipt.
-9. Refresh balances and activity.
+## 1delta response contract
+Every response is checked for both HTTP validity and the 1delta `success` envelope.
 
-Do not execute multiple alternatives.
-Do not reconstruct 1delta calldata.
-Do not alter `to`, `data`, or `value` fields returned for the selected transaction except where required for type conversion before wallet submission.
+Quote mode:
+- `data` contains quote information.
+- `actions` is null.
+
+Build mode:
+- `actions.permissions` contains missing approvals/permissions.
+- `actions.transactions` contains ordered setup/action transactions where present.
+- `actions.alternatives` contains competing swap transactions where present, ordered best-output first.
+
+Execution order:
+1. Mine all required permissions first.
+2. Execute ordered setup transactions.
+3. Execute exactly one selected alternative when alternatives are returned.
+
+Never execute all alternatives.
+Never reconstruct 1delta calldata.
+Never alter `to`, `data`, or `value` fields returned for the selected transaction except type conversion required by the wallet library.
 
 ## Slippage
-Presets: Auto, 0.1%, 0.5%, 1.0%, Custom.
-Internally standardize on basis points.
-Warn on unusually high values.
+1delta accepts slippage in basis points. `50` means 0.5%.
+
+UI presets:
+- Auto
+- 0.1%
+- 0.5%
+- 1.0%
+- Custom
+
+Tokos standardizes slippage internally on basis points and warns on unusually high values.
 
 ## Transaction state machine
 - IDLE
@@ -149,19 +144,33 @@ Normalize user-facing errors into:
 - Transaction reverted
 - Unknown error
 
-Raw errors should remain available to telemetry.
+Raw errors should remain available to telemetry without leaking credentials.
 
 ## Security requirements
 - Never store user private keys.
 - Never sign user transactions server-side.
 - Keep 1delta credentials server-side only.
-- Validate chain IDs, token addresses, decimals, and wallet addresses.
-- Rate-limit public server endpoints.
+- Validate chain IDs, token addresses, amounts, slippage, decimals, and wallet addresses.
+- Rate-limit public server endpoints before production.
 - Sanitize token metadata and remote asset URLs.
 - Maintain token and address blocklists.
 - Simulate transactions where practical before prompting users.
 - Require explicit wallet confirmation for every write.
 - Never silently execute route alternatives.
+- Do not cache account-specific build responses.
+
+## Server environment
+Production secret:
+
+`ONEDELTA_API_KEY`
+
+Optional upstream override for development/testing:
+
+`ONEDELTA_API_URL`
+
+The default upstream is `https://portal.1delta.io`.
+
+Neither variable may use a `VITE_` prefix.
 
 ## Analytics
 Track quote request/success/failure, wallet connection, approval start/success/failure, swap start/sign/confirm/fail, token pair, chain, route, volume, latency, price impact, and execution success rate.
