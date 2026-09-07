@@ -6,7 +6,7 @@ export interface OneDeltaSpotSwapRequest {
   tokenIn: HexAddress
   tokenOut: HexAddress
   amount: string
-  /** Slippage in basis points as accepted by 1delta, e.g. 50 = 0.5%. */
+  /** Slippage in basis points, e.g. 50 = 0.5%. */
   slippage?: number
   /** Omit for quote-only requests. Include to build executable actions. */
   account?: HexAddress
@@ -17,6 +17,28 @@ export interface OneDeltaTransaction {
   data: HexData
   value?: string
   description?: string
+  spender?: HexAddress
+  [key: string]: unknown
+}
+
+export interface OneDeltaQuoteRoute {
+  aggregator?: string
+  tradeInput?: number | string
+  tradeOutput?: number | string
+  deltas?: {
+    aggregator?: string
+    tradeInput?: number | string
+    tradeOutput?: number | string
+    [key: string]: unknown
+  }
+  tx?: OneDeltaTransaction
+  [key: string]: unknown
+}
+
+export interface OneDeltaSpotSwapData {
+  quotes?: OneDeltaQuoteRoute[]
+  currencyIn?: Record<string, unknown>
+  currencyOut?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -35,19 +57,28 @@ export interface OneDeltaApiError {
 
 export interface OneDeltaSpotSwapResponse {
   success: boolean
-  data?: Record<string, unknown> | null
+  data?: OneDeltaSpotSwapData | null
   actions?: OneDeltaActions | null
   error?: OneDeltaApiError
   [key: string]: unknown
 }
 
+export interface TokosQuoteRoute {
+  source: 'tokos-routing'
+  amountIn?: number | string
+  amountOut?: number | string
+  raw: OneDeltaQuoteRoute
+}
+
 export interface TokosSwapQuote {
-  provider: '1delta'
+  provider: 'tokos'
+  routes: TokosQuoteRoute[]
+  bestRoute?: TokosQuoteRoute
   raw: OneDeltaSpotSwapResponse
 }
 
 export interface TokosSwapExecution {
-  provider: '1delta'
+  provider: 'tokos'
   permissions: OneDeltaTransaction[]
   transactions: OneDeltaTransaction[]
   alternatives: OneDeltaTransaction[]
