@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#ffffff">
   <title>Tokos DEX</title>
   <meta name="description" content="Swap tokens through Tokos on Ethereum.">
-  <link rel="icon" href="/icon.svg?v=dex5" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=dex5">
-  <script defer src="/breakdown.js?v=dex5"></script>
-  <script defer src="/app.js?v=dex5"></script>
+  <link rel="icon" href="/icon.svg?v=dex6" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css?v=dex6">
+  <script defer src="/breakdown.js?v=dex6"></script>
+  <script defer src="/app.js?v=dex6"></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex5" alt=""><span>tokos</span><i>.fun</i></a>
+    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex6" alt=""><span>tokos</span><i>.fun</i></a>
     <nav aria-label="Tokos navigation"><a href="https://tokos.fun/app/">Yield</a><a class="active" href="/dex">DEX</a><a href="https://tokos.fun/portfolio/">Portfolio</a><a href="https://tokos.fun/activity/">Activity</a><a href="https://tokos.fun/learn/">Learn</a></nav>
     <button id="wallet-top" class="wallet-button">Connect wallet</button>
   </header>
@@ -24,7 +24,6 @@
         <div><span class="eyebrow">Execution data</span><h1>Best route breakdown</h1><p>Live quote candidates and transaction data returned for your trade.</p></div>
         <div id="api-summary" class="api-summary"><div><span>Quotes returned</span><strong>—</strong></div><div><span>Best source</span><strong>—</strong></div><div><span>Status</span><strong>Waiting</strong></div></div>
       </div>
-
       <div id="api-breakdown" class="api-breakdown empty">
         <div id="api-quote-list" class="api-quote-list"><div class="api-empty">Enter an amount to compare available routes.</div></div>
         <div id="api-execution" class="api-execution hidden"></div>
@@ -32,7 +31,6 @@
         <details class="raw-response"><summary>Raw quote response</summary><pre id="api-raw">No quote loaded.</pre></details>
         <details class="raw-response"><summary>Raw execution response</summary><pre id="api-build-raw">Execution data appears after transaction preparation.</pre></details>
       </div>
-
       <div class="hidden" aria-hidden="true">
         <span id="chart-token-icon"></span><strong id="chart-token-symbol"></strong><span id="chart-token-name"></span><strong id="chart-price"></strong><span id="chart-change"></span>
         <svg><path id="chart-line"></path><path id="chart-area"></path></svg><div id="chart-empty"></div><strong id="stat-high"></strong><strong id="stat-low"></strong><strong id="stat-volume"></strong><strong id="stat-marketcap"></strong>
