@@ -6,9 +6,8 @@ export interface ExecutionPlan {
 }
 
 /**
- * 1delta returns setup transactions and, for spot swaps, may also return
- * competing alternative routes. Permissions are mined first. Setup
- * transactions run in order, followed by exactly one selected alternative.
+ * Permissions are mined first. Setup transactions run in order, followed by
+ * exactly one selected alternative route when alternatives are available.
  */
 export function selectExecutionPlan(execution: TokosSwapExecution, alternativeIndex = 0): ExecutionPlan {
   const selectedAlternative = execution.alternatives[alternativeIndex]
@@ -27,5 +26,5 @@ export function selectExecutionPlan(execution: TokosSwapExecution, alternativeIn
     }
   }
 
-  throw new Error('1delta returned no executable swap transaction')
+  throw new Error('No executable swap transaction was returned')
 }
