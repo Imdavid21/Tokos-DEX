@@ -1,12 +1,11 @@
 import type {
   OneDeltaSpotSwapRequest,
   OneDeltaSpotSwapResponse,
-  OneDeltaTransaction,
   TokosSwapExecution,
   TokosSwapQuote,
 } from './types'
 
-const DEFAULT_ONEDELTA_API_URL = 'https://api.1delta.io'
+const DEFAULT_ONEDELTA_API_URL = 'https://portal.1delta.io'
 const SPOT_SWAP_PATH = '/v1/actions/swap/spot'
 
 export interface OneDeltaClientOptions {
@@ -22,21 +21,21 @@ function assertRequest(input: OneDeltaSpotSwapRequest): void {
   if (!input.tokenIn?.startsWith('0x') || !input.tokenOut?.startsWith('0x')) {
     throw new Error('Invalid token address')
   }
-  if (!input.amount || Number(input.amount) <= 0) {
-    throw new Error('Amount must be greater than zero')
+  if (!input.amount || !/^\d+$/.test(input.amount) || BigInt(input.amount) <= 0n) {
+    throw new Error('Amount must be a positive integer in token base units')
   }
-  if (input.slippage !== undefined && (input.slippage < 0 || input.slippage > 100)) {
-    throw new Error('Slippage must be between 0 and 100 percent')
+  if (input.slippage !== undefined && (!Number.isInteger(input.slippage) || input.slippage < 0 || input.slippage > 10_000)) {
+    throw new Error('Slippage must be an integer between 0 and 10000 basis points')
   }
 }
 
-function normalizeAlternatives(actions: OneDeltaSpotSwapResponse['actions']): OneDeltaTransaction[][] {
-  const alternatives = actions?.alternatives
-  if (!Array.isArray(alternatives)) {
-    return []
+function assertSuccessfulEnvelope(body: OneDeltaSpotSwapResponse): void {
+  if (body.success) {
+    return
   }
 
-  return alternatives.map((alternative) => (Array.isArray(alternative) ? alternative : [alternative]))
+  const code = body.error?.code ? `${body.error.code}: ` : ''
+  throw new Error(`${code}${body.error?.message ?? '1delta returned an unsuccessful response'}`)
 }
 
 export class OneDeltaClient {
@@ -59,11 +58,15 @@ export class OneDeltaClient {
     const raw = await this.request(input)
     const actions = raw.actions
 
+    if (!actions) {
+      throw new Error('1delta returned no execution actions')
+    }
+
     return {
       provider: '1delta',
-      permissions: actions?.permissions ?? [],
-      transactions: actions?.transactions ?? [],
-      alternatives: normalizeAlternatives(actions),
+      permissions: actions.permissions ?? [],
+      transactions: actions.transactions ?? [],
+      alternatives: actions.alternatives ?? [],
       raw,
     }
   }
@@ -91,11 +94,17 @@ export class OneDeltaClient {
     }
 
     const response = await this.fetcher(`${this.apiUrl}${SPOT_SWAP_PATH}?${params.toString()}`, { headers })
+    const body = (await response.json().catch(() => null)) as OneDeltaSpotSwapResponse | null
+
     if (!response.ok) {
-      const details = await response.text().catch(() => '')
-      throw new Error(`1delta request failed (${response.status})${details ? `: ${details}` : ''}`)
+      const message = body?.error?.message ?? `HTTP ${response.status}`
+      throw new Error(`1delta request failed: ${message}`)
+    }
+    if (!body) {
+      throw new Error('1delta returned an invalid JSON response')
     }
 
-    return (await response.json()) as OneDeltaSpotSwapResponse
+    assertSuccessfulEnvelope(body)
+    return body
   }
 }
