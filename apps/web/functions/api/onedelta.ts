@@ -8,6 +8,7 @@ const INTEGER_PATTERN = /^\d+$/
 type OneDeltaBindings = {
   ONEDELTA_API_KEY?: string
   ONEDELTA_API_URL?: string
+  ONEDELTA_API_BASE_URL?: string
 }
 
 type SwapMode = 'quote' | 'build'
@@ -46,7 +47,13 @@ function getValidatedParams(c: Context, mode: SwapMode): URLSearchParams | Respo
     return badRequest('account is required and must be a valid EVM address')
   }
 
-  const params = new URLSearchParams({ chainId, tokenIn, tokenOut, amount })
+  const params = new URLSearchParams({
+    chainId,
+    tokenIn,
+    tokenOut,
+    amount,
+    tradeType: '0',
+  })
   if (slippage !== undefined) {
     params.set('slippage', slippage)
   }
@@ -64,7 +71,7 @@ async function proxySpotSwap(c: Context, mode: SwapMode): Promise<Response> {
   }
 
   const env = c.env as OneDeltaBindings
-  const apiUrl = (env.ONEDELTA_API_URL || DEFAULT_ONEDELTA_API_URL).replace(/\/$/, '')
+  const apiUrl = (env.ONEDELTA_API_BASE_URL || env.ONEDELTA_API_URL || DEFAULT_ONEDELTA_API_URL).replace(/\/$/, '')
   const headers = new Headers({ Accept: 'application/json' })
   if (env.ONEDELTA_API_KEY) {
     headers.set('x-api-key', env.ONEDELTA_API_KEY)
@@ -88,7 +95,7 @@ async function proxySpotSwap(c: Context, mode: SwapMode): Promise<Response> {
     })
   } catch {
     return Response.json(
-      { success: false, error: { code: 'UPSTREAM_UNAVAILABLE', message: '1delta is temporarily unavailable' } },
+      { success: false, error: { code: 'UPSTREAM_UNAVAILABLE', message: 'Routing service is temporarily unavailable' } },
       { status: 502, headers: { 'Cache-Control': 'no-store' } },
     )
   }
