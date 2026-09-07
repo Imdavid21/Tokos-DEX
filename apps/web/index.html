@@ -3,26 +3,24 @@
   <head>
     <meta charset="utf-8" />
 
-    <title>Uniswap Interface</title>
+    <title>Tokos DEX</title>
+    <meta name="description" content="Trade crypto with Tokos. Fast, non-custodial execution across the best available routes." />
+    <meta property="og:title" content="Tokos DEX" />
+    <meta property="og:description" content="Trade crypto with Tokos. Fast, non-custodial execution across the best available routes." />
 
-    <!-- Vite uses / for public assets instead of %PUBLIC_URL% -->
-    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/images/192x192_App_Icon.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/images/512x512_App_Icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/tokos-icon.svg" />
+    <link rel="shortcut icon" type="image/svg+xml" href="/tokos-icon.svg" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#fff" />
+    <meta name="theme-color" content="#000000" />
     <meta name="format-detection" content="telephone=no">
 
     <!-- CSP will be injected here -->
 
-    <link rel="preconnect" href="https://interface.gateway.uniswap.org/" crossorigin/>
     <link rel="preconnect" href="https://mainnet.infura.io/" crossorigin/>
-
     <link rel="preload" href="/fonts/Basel-Grotesk-Book.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/Basel-Grotesk-Medium.woff2" as="font" type="font/woff2" crossorigin />
-    
-    <!-- Cloudflare Turnstile script - loaded early for CSP compliance -->
+
     <link rel="preconnect" href="https://challenges.cloudflare.com" crossorigin />
     <script id="cf-turnstile-script" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
 
@@ -32,15 +30,12 @@
         box-sizing: border-box;
       }
 
-      /**
-        Explicitly load Basel var from public/ so it does not block LCP's critical path.
-      */
       @font-face {
         font-family: 'Basel';
         font-weight: 535;
         font-style: normal;
         font-display: block;
-        src: 
+        src:
           url('/fonts/Basel-Grotesk-Medium.woff2') format('woff2'),
           url('/fonts/Basel-Grotesk-Medium.woff') format('woff');
       }
@@ -50,12 +45,11 @@
         font-weight: 485;
         font-style: normal;
         font-display: block;
-        src: 
+        src:
           url('/fonts/Basel-Grotesk-Book.woff2') format('woff2'),
           url('/fonts/Basel-Grotesk-Book.woff') format('woff');
       }
 
-      /* Subsetted Inter Regular, fetched lazily only when the Privy watermark renders (PrivyWatermark.tsx). */
       @font-face {
         font-family: 'Inter';
         font-weight: 400;
@@ -75,9 +69,11 @@
       body {
         margin: 0;
         padding: 0;
+        background:
+          radial-gradient(80% 60% at 50% -10%, rgba(160, 213, 133, 0.11), transparent 60%),
+          #000;
       }
 
-      /* Only apply overflow-x: hidden on desktop */
       @media (min-width: 768px) {
         html {
           overflow-x: hidden;
@@ -104,29 +100,16 @@
       #root {
         min-height: 100%;
       }
-
-      @media (prefers-color-scheme: dark) {
-        html {
-          background: linear-gradient(rgb(19, 19, 19) 0%, rgb(19, 19, 19) 100%);
-        }
-      }
-
-      @media (prefers-color-scheme: light) {
-        html {
-          background: radial-gradient(100% 100% at 50% 0%, rgba(255, 184, 226, 0) 0%, rgba(255, 255, 255, 0) 100%), rgb(255, 255, 255);
-        }
-      }
     </style>
   </head>
 
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>You need to enable JavaScript to run Tokos DEX.</noscript>
 
     <div id="root"></div>
     <div id="background-radial-gradient"></div>
 
     <script type="module" src="/zone-events.js"></script>
-    <!-- Vite entry point -->
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
