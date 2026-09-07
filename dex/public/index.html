@@ -1,54 +1,8 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
-  <title>Tokos DEX</title>
-  <meta name="description" content="Swap tokens through Tokos on Ethereum.">
-  <link rel="icon" href="/icon.svg?v=dex6" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=dex6">
-  <script defer src="/breakdown.js?v=dex6"></script>
-  <script defer src="/app.js?v=dex6"></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex6" alt=""><span>tokos</span><i>.fun</i></a>
-    <nav aria-label="Tokos navigation"><a href="https://tokos.fun/app/">Yield</a><a class="active" href="/dex">DEX</a><a href="https://tokos.fun/portfolio/">Portfolio</a><a href="https://tokos.fun/activity/">Activity</a><a href="https://tokos.fun/learn/">Learn</a></nav>
-    <button id="wallet-top" class="wallet-button">Connect wallet</button>
-  </header>
-
-  <main class="dex-shell data-layout">
-    <section class="data-panel" aria-label="Execution data">
-      <div class="data-panel-head">
-        <div><span class="eyebrow">Execution data</span><h1>Best route breakdown</h1><p>Live quote candidates and transaction data returned for your trade.</p></div>
-        <div id="api-summary" class="api-summary"><div><span>Quotes returned</span><strong>—</strong></div><div><span>Best source</span><strong>—</strong></div><div><span>Status</span><strong>Waiting</strong></div></div>
-      </div>
-      <div id="api-breakdown" class="api-breakdown empty">
-        <div id="api-quote-list" class="api-quote-list"><div class="api-empty">Enter an amount to compare available routes.</div></div>
-        <div id="api-execution" class="api-execution hidden"></div>
-        <div id="api-benchmark" class="api-benchmark hidden"><details><summary>Direct market benchmark</summary><pre></pre></details></div>
-        <details class="raw-response"><summary>Raw quote response</summary><pre id="api-raw">No quote loaded.</pre></details>
-        <details class="raw-response"><summary>Raw execution response</summary><pre id="api-build-raw">Execution data appears after transaction preparation.</pre></details>
-      </div>
-      <div class="hidden" aria-hidden="true">
-        <span id="chart-token-icon"></span><strong id="chart-token-symbol"></strong><span id="chart-token-name"></span><strong id="chart-price"></strong><span id="chart-change"></span>
-        <svg><path id="chart-line"></path><path id="chart-area"></path></svg><div id="chart-empty"></div><strong id="stat-high"></strong><strong id="stat-low"></strong><strong id="stat-volume"></strong><strong id="stat-marketcap"></strong>
-        <button data-range="30" class="active"></button>
-      </div>
-    </section>
-
-    <aside class="trade-column"><section class="swap-card" aria-label="Swap tokens">
-      <div class="swap-head"><div><strong>Swap</strong><small>Ethereum</small></div><label>Slippage <select id="slippage"><option value="10">0.1%</option><option value="50" selected>0.5%</option><option value="100">1.0%</option></select></label></div>
-      <div class="token-panel"><div class="panel-label"><span>You pay</span><button id="max-button" type="button">Balance <b id="balance">—</b> · MAX</button></div><div class="token-row"><input id="amount-in" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount to sell"><button id="token-in-button" class="token-button" type="button"><span id="token-in-logo" class="token-logo"><span>U</span><img id="token-in-image" alt=""></span><span><strong id="token-in-symbol">USDC</strong><small id="token-in-name">USD Coin</small></span><b>⌄</b></button></div></div>
-      <button id="flip" class="flip" type="button" aria-label="Switch tokens">↓</button>
-      <div class="token-panel output-panel"><div class="panel-label"><span>You receive</span><span id="route-count">Best route</span></div><div class="token-row"><output id="amount-out" class="amount-out">—</output><button id="token-out-button" class="token-button" type="button"><span id="token-out-logo" class="token-logo"><span>W</span><img id="token-out-image" alt=""></span><span><strong id="token-out-symbol">WETH</strong><small id="token-out-name">Wrapped Ether</small></span><b>⌄</b></button></div></div>
-      <div id="route-sources" class="route-sources hidden"><span>Routes</span><div id="route-source-list"></div></div>
-      <div id="quote-details" class="quote-details hidden"><div><span>Best execution</span><strong id="best-source">—</strong></div><div id="benchmark-row" class="hidden"><span>Direct market check</span><strong id="benchmark-output">—</strong></div><div><span>Slippage tolerance</span><strong id="slippage-readout">0.5%</strong></div><div><span>Platform fee</span><strong>0%</strong></div></div>
-      <div id="message" class="message hidden" role="status"></div><button id="action" class="action-button" type="button"><span>Connect wallet</span><b>↗</b></button><div class="wallet-line"><span id="wallet-status">Wallet not connected</span><span>Funds stay in your wallet</span></div>
-    </section></aside>
-  </main>
-
-  <div id="token-modal" class="token-modal hidden" role="dialog" aria-modal="true" aria-labelledby="token-modal-title"><div class="token-modal-card"><div class="token-modal-head"><strong id="token-modal-title">Select token</strong><button id="token-modal-close" type="button" aria-label="Close">×</button></div><input id="token-search" class="token-search" autocomplete="off" spellcheck="false" placeholder="Search token or paste contract address"><div id="token-search-status" class="token-search-status">Search by name, symbol, or any Ethereum contract address.</div><div id="token-list" class="token-list"></div></div></div>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f6f6f2"><title>Tokos DEX</title><meta name="description" content="Swap tokens through Tokos on Ethereum."><link rel="icon" href="/icon.svg?v=dex7" type="image/svg+xml"><link rel="stylesheet" href="/styles.css?v=dex7"><script defer src="/breakdown.js?v=dex7"></script><script defer src="/app.js?v=dex7"></script></head>
+<body><header class="site-header"><a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex7" alt=""><span>tokos</span><i>.fun</i></a><nav aria-label="Tokos navigation"><a href="https://tokos.fun/app/">Yield</a><a class="active" href="/dex">DEX</a><a href="https://tokos.fun/portfolio/">Portfolio</a><a href="https://tokos.fun/activity/">Activity</a><a href="https://tokos.fun/learn/">Learn</a></nav><button id="wallet-top" class="wallet-button">Connect wallet</button></header>
+<main class="dex-workspace">
+<section class="trade-column"><section class="swap-card" aria-label="Swap tokens"><div class="swap-head"><div><strong>Swap</strong><span class="network-pill">Ethereum</span></div><label>Slippage <select id="slippage"><option value="10">0.1%</option><option value="50" selected>0.5%</option><option value="100">1.0%</option></select></label></div><div class="token-panel"><div class="panel-label"><span>Sell</span><button id="max-button" type="button">Balance <b id="balance">—</b> · MAX</button></div><div class="token-row"><input id="amount-in" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount to sell"><button id="token-in-button" class="token-button" type="button"><span id="token-in-logo" class="token-logo"><span>U</span><img id="token-in-image" alt=""></span><span><strong id="token-in-symbol">USDC</strong><small id="token-in-name">USD Coin</small></span><b>⌄</b></button></div></div><button id="flip" class="flip" type="button" aria-label="Switch tokens">↓</button><div class="token-panel output-panel"><div class="panel-label"><span>Buy</span><span id="route-count">Best route</span></div><div class="token-row"><output id="amount-out" class="amount-out">—</output><button id="token-out-button" class="token-button" type="button"><span id="token-out-logo" class="token-logo"><span>W</span><img id="token-out-image" alt=""></span><span><strong id="token-out-symbol">WETH</strong><small id="token-out-name">Wrapped Ether</small></span><b>⌄</b></button></div></div><div id="route-sources" class="route-sources hidden"><span>Compared</span><div id="route-source-list"></div></div><div id="quote-details" class="quote-details hidden"><div><span>Best execution</span><strong id="best-source">—</strong></div><div id="benchmark-row" class="hidden"><span>Direct market check</span><strong id="benchmark-output">—</strong></div><div><span>Slippage</span><strong id="slippage-readout">0.5%</strong></div><div><span>Tokos fee</span><strong>0%</strong></div></div><div id="message" class="message hidden" role="status"></div><button id="action" class="action-button" type="button"><span>Connect wallet</span><b>↗</b></button><div class="wallet-line"><span id="wallet-status">Wallet not connected</span><span>Non-custodial</span></div></section></section>
+<section class="data-panel" aria-label="Routes"><div class="data-panel-head"><div><span class="eyebrow">Live routing</span><h1>Quotes</h1><p>Compare every route returned for this trade.</p></div><div id="api-summary" class="api-summary"><div><span>Routes</span><strong>—</strong></div><div><span>Best</span><strong>—</strong></div><div><span>Status</span><strong>Waiting</strong></div></div></div><div id="api-breakdown" class="api-breakdown empty"><div id="api-quote-list" class="api-quote-list"><div class="api-empty"><strong>Enter an amount</strong><span>Tokos will compare available execution routes here.</span></div></div><div id="api-execution" class="api-execution hidden"></div><div id="api-benchmark" class="api-benchmark hidden"><details><summary>Market benchmark</summary><pre></pre></details></div><div class="developer-data"><details class="raw-response"><summary>Quote API data</summary><pre id="api-raw">No quote loaded.</pre></details><details class="raw-response"><summary>Transaction API data</summary><pre id="api-build-raw">Available after transaction preparation.</pre></details></div></div></section>
+<div class="hidden" aria-hidden="true"><span id="chart-token-icon"></span><strong id="chart-token-symbol"></strong><span id="chart-token-name"></span><strong id="chart-price"></strong><span id="chart-change"></span><svg><path id="chart-line"></path><path id="chart-area"></path></svg><div id="chart-empty"></div><strong id="stat-high"></strong><strong id="stat-low"></strong><strong id="stat-volume"></strong><strong id="stat-marketcap"></strong><button data-range="30" class="active"></button></div></main>
+<div id="token-modal" class="token-modal hidden" role="dialog" aria-modal="true" aria-labelledby="token-modal-title"><div class="token-modal-card"><div class="token-modal-head"><strong id="token-modal-title">Select token</strong><button id="token-modal-close" type="button" aria-label="Close">×</button></div><div class="search-wrap"><span>⌕</span><input id="token-search" class="token-search" autocomplete="off" spellcheck="false" placeholder="Search by name or paste address"></div><div id="token-search-status" class="token-search-status">Any Ethereum ERC-20 contract address is supported.</div><div id="token-list" class="token-list"></div></div></div></body></html>
