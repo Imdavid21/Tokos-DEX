@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), 'public')
 const PORT = Number(process.env.PORT || 3000)
-const ROUTING_API_BASE_URL = (process.env.ROUTING_API_BASE_URL || process.env.ONEDELTA_API_BASE_URL || process.env.ONEDELTA_API_URL || 'https://portal.1delta.io').replace(/\/$/, '')
-const ROUTING_API_KEY = process.env.ROUTING_API_KEY || process.env.ONEDELTA_API_KEY || ''
+const ROUTING_API_BASE_URL = (process.env.ROUTING_API_BASE_URL || '').replace(/\/$/, '')
+const ROUTING_API_KEY = process.env.ROUTING_API_KEY || ''
 const DIRECT_MARKET_API_KEY = process.env.UNISWAP_API_KEY || ''
 const FEE_BPS = Number(process.env.TOKOS_FEE_BPS || 0)
 const FEE_RECIPIENT = process.env.TOKOS_FEE_RECIPIENT || ''
@@ -44,7 +44,7 @@ function securityHeaders(extra = {}) {
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://trade-api.gateway.uniswap.org https://portal.1delta.io https://api.1delta.io https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     ...extra,
   }
 }
@@ -79,6 +79,9 @@ function getParams(url, mode) {
 }
 
 async function proxyRouting(res, url, mode) {
+  if (!ROUTING_API_BASE_URL) {
+    return json(res, 503, { success: false, error: { message: 'Routing service is not configured' } })
+  }
   const parsed = getParams(url, mode)
   if (parsed.error) return json(res, 400, { success: false, error: { message: parsed.error } })
   try {
@@ -148,7 +151,7 @@ async function directBenchmark(res, url) {
 }
 
 async function serveFile(req, res, pathname) {
-  let requestPath = pathname === '/' ? '/index.html' : pathname
+  const requestPath = pathname === '/' ? '/index.html' : pathname
   const safePath = normalize(requestPath).replace(/^(\.\.(\/|\\|$))+/, '')
   let filePath = join(ROOT, safePath)
   try {
@@ -182,7 +185,7 @@ const server = createServer(async (req, res) => {
     return json(res, 200, {
       ok: true,
       service: 'tokos-dex',
-      routingConfigured: Boolean(ROUTING_API_KEY || ROUTING_API_BASE_URL),
+      routingConfigured: Boolean(ROUTING_API_BASE_URL),
       directBenchmarkConfigured: Boolean(DIRECT_MARKET_API_KEY),
       feeBps: Number.isFinite(FEE_BPS) ? FEE_BPS : 0,
       feeRecipientConfigured: Boolean(FEE_RECIPIENT),
