@@ -23,7 +23,7 @@
 ## Before mainnet release
 - Obtain and configure production 1delta API key.
 - Add rate limiting to public Tokos BFF routes.
-- Add transaction simulation and destination allow/validation strategy.
+- Add transaction simulation and destination validation that does not mutate 1delta calldata.
 - Run full typecheck, unit tests, and E2E tests.
 - Test WETH/USDC and ERC20/ERC20 on a fork before live-value tests.
 - Remove or disable UniswapX and unused Uniswap routing paths.
