@@ -22,6 +22,10 @@ import { getCurrentPageFromLocation } from '~/utils/urlRoutes'
 
 const OVERRIDE_PAGE_LAYOUT = [EXTENSION_PASSKEY_AUTH_PATH]
 
+function toTokosCopy(value: string | undefined, fallback: string): string {
+  return (value ?? fallback).replaceAll('Uniswap', 'Tokos').replaceAll('UNISWAP', 'TOKOS')
+}
+
 export function App() {
   const colors = useSporeColors()
 
@@ -29,7 +33,6 @@ export function App() {
   const { pathname } = location
   const currentPage = getCurrentPageFromLocation(pathname)
 
-  // Captured once at mount so in-frame client-side nav can't flip embedded-ness or the surface.
   const { embedded, view: embedView } = useEmbedSession()
 
   useFeatureFlagUrlOverrides()
@@ -39,10 +42,13 @@ export function App() {
   }, [])
 
   const metaTags = useDynamicMetatags()
-  const staticTitle = findRouteByPath(pathname)?.getTitle(pathname) ?? 'Uniswap Interface'
-  const staticDescription = findRouteByPath(pathname)?.getDescription(pathname)
+  const routeDefinition = findRouteByPath(pathname)
+  const staticTitle = toTokosCopy(routeDefinition?.getTitle(pathname), 'Tokos DEX')
+  const staticDescription = toTokosCopy(
+    routeDefinition?.getDescription(pathname),
+    'Trade crypto with Tokos. Fast, non-custodial execution across the best available routes.',
+  )
 
-  // redirect address to landing pages until implemented
   const shouldRedirectToAppInstall = pathname.startsWith('/address/')
   useLayoutEffect(() => {
     if (shouldRedirectToAppInstall) {
@@ -60,21 +66,15 @@ export function App() {
   }
 
   const shouldOverridePageLayout = OVERRIDE_PAGE_LAYOUT.includes(pathname)
-  // `view=swap` drops the app chrome and mounts SwapPage bare; the default full view keeps it.
   const embedCapabilities = getSwapCapabilities(embedView)
 
   return (
     <ErrorBoundary>
       <Trace page={currentPage}>
-        {/*
-          This is where *static* page titles are injected into the <head> tag. If you
-          want to set a page title based on data that's dynamic or not available on first render,
-          you can set it later in the page component itself, since react-helmet-async prefers the most recently rendered title.
-        */}
         <Helmet>
           <title>{staticTitle}</title>
-          {staticDescription && <meta name="description" content={staticDescription} />}
-          {staticDescription && <meta property="og:description" content={staticDescription} />}
+          <meta name="description" content={staticDescription} />
+          <meta property="og:description" content={staticDescription} />
           {metaTags.map((tag, index) => (
             <meta key={index} {...tag} />
           ))}
@@ -94,7 +94,6 @@ export function App() {
           embedCapabilities.appChrome ? (
             <AppLayout embedded embedView={embedView} />
           ) : (
-            // Swap-only surface: no chrome; SwapPage strips itself via useEmbedView.
             <Body shouldRenderAppChrome={false} embedded embedView={embedView} />
           )
         ) : shouldOverridePageLayout ? (
