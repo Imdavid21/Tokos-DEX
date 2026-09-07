@@ -21,7 +21,30 @@ describe('OneDeltaClient', () => {
     expect(fetcher).toHaveBeenCalledOnce()
   })
 
-  it('throws when 1delta returns success false even with HTTP 200', async () => {
+  it('normalizes candidate routes behind the Tokos quote surface', async () => {
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        success: true,
+        data: {
+          quotes: [
+            { aggregator: 'route-a', tradeInput: 1, tradeOutput: 2500 },
+            { aggregator: 'route-b', tradeInput: 1, tradeOutput: 2498 },
+          ],
+        },
+        actions: null,
+      }),
+    ) as unknown as typeof fetch
+
+    const client = new OneDeltaClient({ fetcher })
+    const quote = await client.getSpotQuote(input)
+
+    expect(quote.provider).toBe('tokos')
+    expect(quote.routes).toHaveLength(2)
+    expect(quote.bestRoute?.amountOut).toBe(2500)
+    expect(quote.bestRoute?.source).toBe('tokos-routing')
+  })
+
+  it('throws when the routing backend returns success false even with HTTP 200', async () => {
     const fetcher = vi.fn(async () => Response.json({ success: false, error: { code: 'INVALID_PARAM', message: 'bad pair' } })) as unknown as typeof fetch
     const client = new OneDeltaClient({ fetcher })
 
