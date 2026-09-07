@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#ffffff">
   <title>Tokos DEX</title>
   <meta name="description" content="Swap tokens through Tokos on Ethereum.">
-  <link rel="icon" href="/icon.svg?v=20260907-2" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=20260907-2">
-  <script defer src="/app.js?v=20260907-2"></script>
+  <link rel="icon" href="/icon.svg?v=dex4" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css?v=dex4">
+  <script defer src="/app.js?v=dex4"></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=20260907-2" alt=""><span>tokos</span><i>.fun</i></a>
+    <a class="brand" href="https://tokos.fun" aria-label="Tokos home"><img src="/icon.svg?v=dex4" alt=""><span>tokos</span><i>.fun</i></a>
     <nav aria-label="Tokos navigation"><a href="https://tokos.fun/app/">Yield</a><a class="active" href="/dex">DEX</a><a href="https://tokos.fun/portfolio/">Portfolio</a><a href="https://tokos.fun/activity/">Activity</a><a href="https://tokos.fun/learn/">Learn</a></nav>
     <button id="wallet-top" class="wallet-button">Connect wallet</button>
   </header>
@@ -20,34 +20,44 @@
   <main class="dex-shell">
     <section class="market-panel" aria-label="Token market">
       <div class="market-head">
-        <div class="market-token"><span id="chart-token-icon" class="market-icon">E</span><div><strong id="chart-token-symbol">ETH</strong><span id="chart-token-name">Ether</span></div></div>
+        <div class="market-token">
+          <span id="chart-token-icon" class="market-icon"><span>W</span></span>
+          <div><strong id="chart-token-symbol">WETH</strong><span id="chart-token-name">Wrapped Ether</span></div>
+        </div>
         <div class="market-price"><strong id="chart-price">—</strong><span id="chart-change">—</span></div>
-        <div class="chart-ranges" aria-label="Chart range"><button class="active" data-range="1">24H</button><button data-range="7">7D</button><button data-range="30">30D</button><button data-range="365">1Y</button></div>
+        <div class="chart-ranges" aria-label="Chart range"><button data-range="1">24H</button><button data-range="7">7D</button><button class="active" data-range="30">30D</button><button data-range="180">6M</button></div>
       </div>
-      <div class="chart-stage"><svg id="price-chart" viewBox="0 0 900 360" preserveAspectRatio="none" aria-label="Token price chart"><path id="chart-area"></path><path id="chart-line"></path></svg><div id="chart-empty" class="chart-empty">Select a token to load market data</div></div>
+
+      <div class="chart-stage">
+        <svg id="price-chart" viewBox="0 0 900 360" preserveAspectRatio="none" aria-label="Token price chart">
+          <defs><linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5b12" stop-opacity=".14"/><stop offset="1" stop-color="#ff5b12" stop-opacity="0"/></linearGradient></defs>
+          <g id="chart-grid"><line x1="0" y1="72" x2="900" y2="72"/><line x1="0" y1="180" x2="900" y2="180"/><line x1="0" y1="288" x2="900" y2="288"/></g>
+          <path id="chart-area"></path><path id="chart-line"></path>
+        </svg>
+        <div id="chart-empty" class="chart-empty">Loading market data…</div>
+      </div>
+
       <div class="market-stats"><div><span>24h high</span><strong id="stat-high">—</strong></div><div><span>24h low</span><strong id="stat-low">—</strong></div><div><span>24h volume</span><strong id="stat-volume">—</strong></div><div><span>Market cap</span><strong id="stat-marketcap">—</strong></div></div>
     </section>
 
     <aside class="trade-column">
       <section class="swap-card" aria-label="Swap tokens">
-        <div class="swap-head">
-          <div><strong>Swap</strong><small>Ethereum</small></div>
-          <label>Slippage <select id="slippage"><option value="10">0.1%</option><option value="50" selected>0.5%</option><option value="100">1.0%</option></select></label>
-        </div>
+        <div class="swap-head"><div><strong>Swap</strong><small>Ethereum</small></div><label>Slippage <select id="slippage"><option value="10">0.1%</option><option value="50" selected>0.5%</option><option value="100">1.0%</option></select></label></div>
 
         <div class="token-panel">
           <div class="panel-label"><span>You pay</span><button id="max-button" type="button">Balance <b id="balance">—</b> · MAX</button></div>
-          <div class="token-row"><input id="amount-in" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount to sell"><button id="token-in-button" class="token-button" type="button"><img id="token-in-image" alt=""><span><strong id="token-in-symbol">ETH</strong><small id="token-in-name">Ether</small></span><b>⌄</b></button></div>
+          <div class="token-row"><input id="amount-in" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Amount to sell"><button id="token-in-button" class="token-button" type="button"><span id="token-in-logo" class="token-logo"><span>U</span><img id="token-in-image" alt=""></span><span><strong id="token-in-symbol">USDC</strong><small id="token-in-name">USD Coin</small></span><b>⌄</b></button></div>
         </div>
 
         <button id="flip" class="flip" type="button" aria-label="Switch tokens">↓</button>
 
         <div class="token-panel output-panel">
           <div class="panel-label"><span>You receive</span><span id="route-count">Best route</span></div>
-          <div class="token-row"><output id="amount-out" class="amount-out">—</output><button id="token-out-button" class="token-button" type="button"><img id="token-out-image" alt=""><span><strong id="token-out-symbol">USDC</strong><small id="token-out-name">USD Coin</small></span><b>⌄</b></button></div>
+          <div class="token-row"><output id="amount-out" class="amount-out">—</output><button id="token-out-button" class="token-button" type="button"><span id="token-out-logo" class="token-logo"><span>W</span><img id="token-out-image" alt=""></span><span><strong id="token-out-symbol">WETH</strong><small id="token-out-name">Wrapped Ether</small></span><b>⌄</b></button></div>
         </div>
 
-        <div id="quote-details" class="quote-details hidden"><div><span>Execution</span><strong>Best available</strong></div><div id="benchmark-row" class="hidden"><span>Direct market check</span><strong id="benchmark-output">—</strong></div><div><span>Slippage tolerance</span><strong id="slippage-readout">0.5%</strong></div><div><span>Platform fee</span><strong>0%</strong></div></div>
+        <div id="route-sources" class="route-sources hidden"><span>Routes</span><div id="route-source-list"></div></div>
+        <div id="quote-details" class="quote-details hidden"><div><span>Best execution</span><strong id="best-source">—</strong></div><div id="benchmark-row" class="hidden"><span>Direct market check</span><strong id="benchmark-output">—</strong></div><div><span>Slippage tolerance</span><strong id="slippage-readout">0.5%</strong></div><div><span>Platform fee</span><strong>0%</strong></div></div>
         <div id="message" class="message hidden" role="status"></div>
         <button id="action" class="action-button" type="button"><span>Connect wallet</span><b>↗</b></button>
         <div class="wallet-line"><span id="wallet-status">Wallet not connected</span><span>Funds stay in your wallet</span></div>
@@ -56,7 +66,7 @@
   </main>
 
   <div id="token-modal" class="token-modal hidden" role="dialog" aria-modal="true" aria-labelledby="token-modal-title">
-    <div class="token-modal-card"><div class="token-modal-head"><strong id="token-modal-title">Select token</strong><button id="token-modal-close" type="button" aria-label="Close">×</button></div><input id="token-search" class="token-search" autocomplete="off" spellcheck="false" placeholder="Search name, symbol, or paste contract address"><div id="token-search-status" class="token-search-status">Search tokens or paste any Ethereum token contract address.</div><div id="token-list" class="token-list"></div></div>
+    <div class="token-modal-card"><div class="token-modal-head"><strong id="token-modal-title">Select token</strong><button id="token-modal-close" type="button" aria-label="Close">×</button></div><input id="token-search" class="token-search" autocomplete="off" spellcheck="false" placeholder="Search token or paste contract address"><div id="token-search-status" class="token-search-status">Search by name, symbol, or any Ethereum contract address.</div><div id="token-list" class="token-list"></div></div>
   </div>
 </body>
 </html>
