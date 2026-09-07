@@ -1,0 +1,37 @@
+name: Tokos DEX CI
+
+on:
+  push:
+    branches:
+      - main
+      - tokos/1delta-integration
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        working-directory: dex
+        run: npm run check
+      - name: Smoke-test server
+        working-directory: dex
+        run: |
+          node server.mjs > /tmp/tokos-dex.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:3000/health >/tmp/health.json; then break; fi
+            sleep 0.5
+          done
+          cat /tmp/health.json
+          curl -fsS http://127.0.0.1:3000/ | grep -q 'Tokos DEX'
+          curl -fsS http://127.0.0.1:3000/styles.css >/dev/null
+          curl -fsS http://127.0.0.1:3000/app.js >/dev/null
