@@ -1,6 +1,8 @@
 import type {
+  OneDeltaQuoteRoute,
   OneDeltaSpotSwapRequest,
   OneDeltaSpotSwapResponse,
+  TokosQuoteRoute,
   TokosSwapExecution,
   TokosSwapQuote,
 } from './types'
@@ -35,7 +37,17 @@ function assertSuccessfulEnvelope(body: OneDeltaSpotSwapResponse): void {
   }
 
   const code = body.error?.code ? `${body.error.code}: ` : ''
-  throw new Error(`${code}${body.error?.message ?? '1delta returned an unsuccessful response'}`)
+  throw new Error(`${code}${body.error?.message ?? 'Routing backend returned an unsuccessful response'}`)
+}
+
+function normalizeRoute(route: OneDeltaQuoteRoute): TokosQuoteRoute {
+  const deltas = route.deltas
+  return {
+    source: 'tokos-routing',
+    amountIn: route.tradeInput ?? deltas?.tradeInput,
+    amountOut: route.tradeOutput ?? deltas?.tradeOutput,
+    raw: route,
+  }
 }
 
 export class OneDeltaClient {
@@ -51,7 +63,8 @@ export class OneDeltaClient {
 
   async getSpotQuote(input: Omit<OneDeltaSpotSwapRequest, 'account'>): Promise<TokosSwapQuote> {
     const raw = await this.request(input)
-    return { provider: '1delta', raw }
+    const routes = (raw.data?.quotes ?? []).map(normalizeRoute)
+    return { provider: 'tokos', routes, bestRoute: routes[0], raw }
   }
 
   async buildSpotSwap(input: OneDeltaSpotSwapRequest & { account: `0x${string}` }): Promise<TokosSwapExecution> {
@@ -59,11 +72,11 @@ export class OneDeltaClient {
     const actions = raw.actions
 
     if (!actions) {
-      throw new Error('1delta returned no execution actions')
+      throw new Error('Routing backend returned no execution actions')
     }
 
     return {
-      provider: '1delta',
+      provider: 'tokos',
       permissions: actions.permissions ?? [],
       transactions: actions.transactions ?? [],
       alternatives: actions.alternatives ?? [],
@@ -98,10 +111,10 @@ export class OneDeltaClient {
 
     if (!response.ok) {
       const message = body?.error?.message ?? `HTTP ${response.status}`
-      throw new Error(`1delta request failed: ${message}`)
+      throw new Error(`Routing request failed: ${message}`)
     }
     if (!body) {
-      throw new Error('1delta returned an invalid JSON response')
+      throw new Error('Routing backend returned an invalid JSON response')
     }
 
     assertSuccessfulEnvelope(body)
