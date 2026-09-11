@@ -1,5 +1,5 @@
 import Fastify from"fastify";import cors from"@fastify/cors";import rateLimit from"@fastify/rate-limit";import{loadServerEnv}from"@tokos-data/config";import{registerRoutes}from"./routes.js";
 const env=loadServerEnv(),app=Fastify({logger:{level:env.LOG_LEVEL},requestIdHeader:"x-request-id",bodyLimit:262144});
 await app.register(cors,{origin:["development","test"].includes(env.APP_ENV)?true:[env.APP_URL],methods:["GET","HEAD","OPTIONS"]});await app.register(rateLimit,{max:300,timeWindow:"1 minute"});
-app.setErrorHandler((error,request,reply)=>{request.log.error({err:error},"request failed");return reply.code(error.validation?400:500).send({error:{code:error.validation?"INVALID_REQUEST":"INTERNAL_ERROR",message:error.validation?"Invalid request":"Request failed",requestId:request.id}})});
+app.setErrorHandler((error,request,reply)=>{const validation=typeof error==="object"&&error!==null&&"validation" in error&&Boolean((error as {validation?:unknown}).validation);request.log.error({err:error},"request failed");return reply.code(validation?400:500).send({error:{code:validation?"INVALID_REQUEST":"INTERNAL_ERROR",message:validation?"Invalid request":"Request failed",requestId:request.id}})});
 await registerRoutes(app,env);await app.listen({port:Number(process.env.PORT??env.API_PORT),host:"0.0.0.0"});
