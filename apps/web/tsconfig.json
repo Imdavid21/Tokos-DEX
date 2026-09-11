@@ -1,5 +1,14 @@
 {
   "extends":"../../tsconfig.base.json",
-  "compilerOptions":{"jsx":"preserve","plugins":[{"name":"next"}],"noEmit":true,"incremental":true,"paths":{"@/*":["./*"]}},
-  "include":["next-env.d.ts","**/*.ts","**/*.tsx",".next/types/**/*.ts"],"exclude":["node_modules"]
+  "compilerOptions":{
+    "module":"ESNext",
+    "moduleResolution":"Bundler",
+    "jsx":"preserve",
+    "plugins":[{"name":"next"}],
+    "noEmit":true,
+    "incremental":true,
+    "paths":{"@/*":["./*"]}
+  },
+  "include":["next-env.d.ts","**/*.ts","**/*.tsx",".next/types/**/*.ts"],
+  "exclude":["node_modules"]
 }
