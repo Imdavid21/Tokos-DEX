@@ -11,7 +11,7 @@
     "dev": "pnpm build:packages && pnpm --parallel --filter @tokos-data/api --filter @tokos-data/worker --filter @tokos-data/web dev",
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
-    "typecheck": "pnpm -r --if-present typecheck",
+    "typecheck": "pnpm build:packages && pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "test:unit": "pnpm --filter @tokos-data/analytics test",
     "test:e2e": "pnpm --filter @tokos-data/web test:e2e",
