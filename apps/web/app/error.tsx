@@ -1,1 +1,3 @@
-"use client";export default function ErrorPage({reset}:{error:Error;reset:()=>void}){return <div className="page"><div className="empty"><div><h2>This view could not load</h2><p>The normalized data service returned an error. No values have been substituted.</p><button className="btn" onClick={reset} style={{marginTop:14}}>Retry</button></div></div></div>}
+"use client";
+import {DataState} from "@/components/DataState";
+export default function ErrorPage({reset}:{error:Error;reset:()=>void}){return <div className="page"><DataState kind="provider" title="This view could not load" detail="The normalized data service returned an error. No values were substituted."/><div className="toolbar" style={{justifyContent:"center",marginTop:12}}><button className="btn" onClick={reset}>Retry</button></div></div>}
