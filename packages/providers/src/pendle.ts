@@ -1,6 +1,7 @@
 import{z}from"zod";import{fetchJson}from"./http.js";
-const token=z.object({address:z.string().optional(),symbol:z.string().optional(),name:z.string().optional(),decimals:z.number().optional(),price:z.object({usd:z.number().nullable().optional()}).passthrough().optional()}).passthrough();
-const market=z.object({chainId:z.coerce.string(),address:z.string(),expiry:z.number(),impliedApy:z.number().nullable().optional(),underlyingApy:z.number().nullable().optional(),tvl:z.object({usd:z.number().nullable().optional()}).passthrough().optional(),liquidity:z.object({usd:z.number().nullable().optional()}).passthrough().optional(),volume24h:z.object({usd:z.number().nullable().optional()}).passthrough().optional(),pt:token.optional(),yt:token.optional(),sy:token.optional(),underlyingAsset:token.optional(),name:z.string().optional()}).passthrough();
+const tokenObject=z.object({address:z.string().optional(),symbol:z.string().optional(),name:z.string().optional(),decimals:z.number().optional(),price:z.object({usd:z.number().nullable().optional()}).passthrough().optional()}).passthrough();
+const token=z.union([tokenObject,z.string().transform(address=>({address}))]);
+const market=z.object({chainId:z.coerce.string(),address:z.string(),expiry:z.union([z.number(),z.string()]),impliedApy:z.number().nullable().optional(),underlyingApy:z.number().nullable().optional(),tvl:z.object({usd:z.number().nullable().optional()}).passthrough().optional(),liquidity:z.object({usd:z.number().nullable().optional()}).passthrough().optional(),volume24h:z.object({usd:z.number().nullable().optional()}).passthrough().optional(),pt:token.optional(),yt:token.optional(),sy:token.optional(),underlyingAsset:token.optional(),name:z.string().optional()}).passthrough();
 const list=z.object({markets:z.array(market),total:z.number().optional(),totalCount:z.number().optional()}).passthrough();
 const page=z.union([
  list.transform(x=>({markets:x.markets,total:x.total??x.totalCount})),
