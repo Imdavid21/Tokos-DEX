@@ -24,10 +24,10 @@ export class OneDeltaClient{
  private headers():HeadersInit{return this.options.apiKey?{"x-api-key":this.options.apiKey}:{}}
  async chains(){const{data}=await fetchJson<unknown>("1delta",`${this.options.baseUrl}/data/chains`,{headers:this.headers()});return envelope(z.object({items:z.array(chainSchema)}).passthrough()).parse(data).data.items;}
  async lenders(chains:string[]){const{data}=await fetchJson<unknown>("1delta",`${this.options.baseUrl}/data/lending/lenders?${qs({chains:chains.join(",")})}`,{headers:this.headers()});return envelope(z.object({items:z.array(lenderSchema)}).passthrough()).parse(data).data.items;}
- async latest(chains:string[],lenderKeys:string[],options?:{terms?:"digest"|"full"|"none"}){
+ async latest(chains:string[],lenderKeys:string[],options?:{terms?:"digest"|"full"|"none";attempts?:number}){
   if(!lenderKeys.length||lenderKeys.length>20)throw new RangeError("1delta latest requires 1-20 lender keys");
   const url=`${this.options.baseUrl}/data/lending/latest?${qs({chains:chains.join(","),lenders:lenderKeys.join(","),terms:options?.terms??"digest"})}`;
-  const{data,status}=await fetchJson<unknown>("1delta",url,{headers:this.headers()});return{parsed:latestResponseSchema.parse(data),raw:data,status,endpoint:url};
+  const{data,status}=await fetchJson<unknown>("1delta",url,{headers:this.headers()},options?.attempts??5);return{parsed:latestResponseSchema.parse(data),raw:data,status,endpoint:url};
  }
  async comparables(query:{chainId?:string|undefined;chainIds?:string|undefined;collateral?:string|undefined;collateralGroups?:string|undefined;debt?:string|undefined;debtGroups?:string|undefined;amountUsd:number;horizonDays:number;side?:"supply"|"borrow"|undefined;rateType?:"all"|"fixed"|"float"|undefined;limit?:number|undefined;includeStale?:boolean|undefined;includeIlliquid?:boolean|undefined;}){
   const url=`${this.options.baseUrl}/data/lending/comparables?${qs({chainId:query.chainId,chainIds:query.chainIds,collateral:query.collateral,collateralGroups:query.collateralGroups,debt:query.debt,debtGroups:query.debtGroups,amountUsd:query.amountUsd,horizonDays:query.horizonDays,side:query.side??"supply",rateType:query.rateType??"all",limit:Math.min(query.limit??25,25),includeStale:query.includeStale,includeIlliquid:query.includeIlliquid})}`;
