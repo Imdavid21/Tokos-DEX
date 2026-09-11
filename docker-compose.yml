@@ -1,12 +1,12 @@
 services:
   postgres:
-    image: timescale/timescaledb-ha:pg18
+    image: timescale/timescaledb:2.30.0-pg18
     environment:
       POSTGRES_DB: tokos_data
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports: ["5432:5432"]
-    volumes: [tokos-postgres:/home/postgres/pgdata/data]
+    volumes: [tokos-postgres:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL","pg_isready -U postgres -d tokos_data"]
       interval: 5s
