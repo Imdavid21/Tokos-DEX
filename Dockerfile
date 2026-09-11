@@ -9,6 +9,7 @@ RUN TSC="$(find /app/node_modules/.pnpm -type f \( -path '*/node_modules/@typesc
  && printf '#!/bin/sh\nexec node "%s" "$@"\n' "$TSC" > /usr/local/bin/tsc \
  && chmod +x /usr/local/bin/tsc
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_BASE_PATH=/data
 RUN pnpm build
 
 FROM node:24.21.0-bookworm-slim AS runtime
