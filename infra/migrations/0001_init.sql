@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS timescaledb;
+DO $ BEGIN IF EXISTS(SELECT 1 FROM pg_available_extensions WHERE name='timescaledb') THEN CREATE EXTENSION IF NOT EXISTS timescaledb; END IF; END $;
 
 CREATE TABLE IF NOT EXISTS assets(id text PRIMARY KEY,symbol text NOT NULL,name text NOT NULL,asset_group text,decimals integer,logo_url text,category text NOT NULL,stablecoin_peg text,aliases text[] NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS chains(id text PRIMARY KEY,slug text UNIQUE NOT NULL,name text NOT NULL,logo_url text,native_asset_symbol text,active boolean NOT NULL DEFAULT true);
@@ -9,11 +9,11 @@ CREATE TABLE IF NOT EXISTS markets(id text PRIMARY KEY,provider text NOT NULL CH
 CREATE TABLE IF NOT EXISTS provider_observations(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),provider text NOT NULL,endpoint text NOT NULL,request_fingerprint text NOT NULL,source_observed_at timestamptz,ingested_at timestamptz NOT NULL DEFAULT now(),http_status integer NOT NULL,success boolean NOT NULL,payload jsonb,payload_hash text NOT NULL,error_code text);
 CREATE TABLE IF NOT EXISTS ingestion_health(provider text PRIMARY KEY,last_attempt timestamptz,last_success timestamptz,last_error text,consecutive_failures integer NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS market_snapshots(market_id text NOT NULL REFERENCES markets(id),observed_at timestamptz NOT NULL,source_observed_at timestamptz,ingested_at timestamptz NOT NULL DEFAULT now(),supply_apr double precision,borrow_apr double precision,fixed_apy double precision,implied_apy double precision,underlying_apy double precision,deposits_usd numeric,debt_usd numeric,liquidity_usd numeric,tvl_usd numeric,utilization double precision,volume_24h_usd numeric,reward_apr double precision,intrinsic_apr double precision,apr_ex_rewards double precision,stale boolean NOT NULL DEFAULT false,raw_payload_hash text,PRIMARY KEY(market_id,observed_at));
-SELECT create_hypertable('market_snapshots',by_range('observed_at'),if_not_exists=>TRUE);
+DO $ BEGIN IF EXISTS(SELECT 1 FROM pg_extension WHERE extname='timescaledb') THEN PERFORM create_hypertable('market_snapshots',by_range('observed_at'),if_not_exists=>TRUE); END IF; END $;
 CREATE TABLE IF NOT EXISTS execution_depth_snapshots(market_id text NOT NULL REFERENCES markets(id),observed_at timestamptz NOT NULL,side text NOT NULL,notional_usd numeric NOT NULL,horizon_days integer,horizon_key integer GENERATED ALWAYS AS(COALESCE(horizon_days,-1)) STORED,headline_apr double precision,apr_at_amount double precision,effective_apr double precision,effective_apy double precision,cost_pct double precision,price_impact_bps double precision,fee_usd numeric,fillable numeric,capped boolean,quote_basis text,locked boolean,price_risk boolean,assumptions jsonb NOT NULL DEFAULT '[]',methodology_version text NOT NULL,PRIMARY KEY(market_id,observed_at,side,notional_usd,horizon_key));
-SELECT create_hypertable('execution_depth_snapshots',by_range('observed_at'),if_not_exists=>TRUE);
+DO $ BEGIN IF EXISTS(SELECT 1 FROM pg_extension WHERE extname='timescaledb') THEN PERFORM create_hypertable('execution_depth_snapshots',by_range('observed_at'),if_not_exists=>TRUE); END IF; END $;
 CREATE TABLE IF NOT EXISTS basis_snapshots(asset_id text NOT NULL REFERENCES assets(id),observed_at timestamptz NOT NULL,horizon_days integer NOT NULL,notional_usd numeric NOT NULL,fixed_market_id text NOT NULL REFERENCES markets(id),floating_market_id text NOT NULL REFERENCES markets(id),fixed_rate double precision NOT NULL,floating_rate double precision NOT NULL,basis_bps double precision NOT NULL,methodology_version text NOT NULL,PRIMARY KEY(asset_id,observed_at,horizon_days,notional_usd,fixed_market_id,floating_market_id));
-SELECT create_hypertable('basis_snapshots',by_range('observed_at'),if_not_exists=>TRUE);
+DO $ BEGIN IF EXISTS(SELECT 1 FROM pg_extension WHERE extname='timescaledb') THEN PERFORM create_hypertable('basis_snapshots',by_range('observed_at'),if_not_exists=>TRUE); END IF; END $;
 
 CREATE INDEX IF NOT EXISTS markets_asset_status_idx ON markets(asset_id,status);
 CREATE INDEX IF NOT EXISTS markets_protocol_status_idx ON markets(protocol_id,status);
