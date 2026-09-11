@@ -1,4 +1,37 @@
 "use client";
-import Link from "next/link";import {usePathname} from "next/navigation";import {Activity,Columns3,Database,LayoutDashboard,TableProperties} from "lucide-react";
-const groups=[{label:"Explore",items:[["/","Overview",LayoutDashboard],["/markets","Markets",TableProperties],["/rates","Rates",Activity],["/compare","Compare",Columns3]]},{label:"Build",items:[["/datasets","Datasets",Database]]}] as const;
-export function Nav(){const path=usePathname();return <nav className="rail" aria-label="Primary">{groups.map(g=><div key={g.label}><div className="nav-label">{g.label}</div>{g.items.map(([href,label,Icon])=>{const active=href==="/"?path===href:path.startsWith(href);return <Link key={href} href={href} className={`nav-link ${active?"active":""}`}><Icon size={16}/><span>{label}</span></Link>})}</div>)}</nav>}
+import Link from "next/link";
+import {usePathname} from "next/navigation";
+import {Activity,Columns3,Database,LayoutDashboard,TableProperties} from "lucide-react";
+
+type Item={href?:string;label:string;Icon:typeof Activity};
+const groups:Array<{label:string;items:Item[]}>= [
+  {label:"Research",items:[
+    {href:"/",label:"Overview",Icon:LayoutDashboard},
+    {href:"/markets",label:"Markets",Icon:TableProperties},
+    {href:"/rates",label:"Rates",Icon:Activity},
+    {label:"Yield Curve",Icon:Activity},
+    {label:"Basis",Icon:Activity},
+    {label:"Liquidity",Icon:Activity}
+  ]},
+  {label:"Entities",items:[
+    {label:"Assets",Icon:TableProperties},
+    {label:"Protocols",Icon:TableProperties},
+    {label:"Chains",Icon:TableProperties},
+    {href:"/compare",label:"Compare",Icon:Columns3}
+  ]},
+  {label:"Data",items:[{href:"/datasets",label:"Datasets",Icon:Database}]}
+];
+
+export function Nav(){
+  const path=usePathname();
+  return <nav className="rail" aria-label="Primary">
+    {groups.map(group=><div key={group.label}>
+      <div className="nav-label">{group.label}</div>
+      {group.items.map(({href,label,Icon})=>{
+        if(!href)return <span key={label} className="nav-link disabled" aria-disabled="true" title="Coming in the next Tokos Data build phase"><Icon size={15}/><span>{label}</span></span>;
+        const active=href==="/"?path===href:path.startsWith(href);
+        return <Link key={href} href={href} className={`nav-link ${active?"active":""}`}><Icon size={15}/><span>{label}</span></Link>;
+      })}
+    </div>)}
+  </nav>
+}
