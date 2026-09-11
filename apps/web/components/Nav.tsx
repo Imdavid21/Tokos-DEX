@@ -1,0 +1,4 @@
+"use client";
+import Link from "next/link";import {usePathname} from "next/navigation";import {Activity,Columns3,Database,LayoutDashboard,TableProperties} from "lucide-react";
+const groups=[{label:"Explore",items:[["/","Overview",LayoutDashboard],["/markets","Markets",TableProperties],["/rates","Rates",Activity],["/compare","Compare",Columns3]]},{label:"Build",items:[["/datasets","Datasets",Database]]}] as const;
+export function Nav(){const path=usePathname();return <nav className="rail" aria-label="Primary">{groups.map(g=><div key={g.label}><div className="nav-label">{g.label}</div>{g.items.map(([href,label,Icon])=>{const active=href==="/"?path===href:path.startsWith(href);return <Link key={href} href={href} className={`nav-link ${active?"active":""}`}><Icon size={16}/><span>{label}</span></Link>})}</div>)}</nav>}

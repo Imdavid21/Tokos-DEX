@@ -1,0 +1,39 @@
+name: ci
+on:
+  pull_request:
+  push: { branches: [main] }
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb-ha:pg18
+        env: { POSTGRES_DB: tokos_data, POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tokos_data"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tokos_data
+      REDIS_URL: redis://localhost:6379
+      APP_ENV: test
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      ONEDELTA_API_BASE_URL: https://portal.1delta.io/v1
+      PENDLE_API_BASE_URL: https://api-v2.pendle.finance/core
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 12.3.4, run_install: false }
+      - uses: actions/setup-node@v5
+        with: { node-version: 24.21.0 }
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

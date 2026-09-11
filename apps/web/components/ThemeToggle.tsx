@@ -1,0 +1,3 @@
+"use client";
+import {Moon,Sun} from "lucide-react";import {useEffect,useState} from "react";
+export function ThemeToggle(){const [dark,setDark]=useState(false);useEffect(()=>{const saved=localStorage.getItem("tokos-data-theme");const d=saved?saved==="dark":matchMedia("(prefers-color-scheme: dark)").matches;setDark(d);document.documentElement.dataset.theme=d?"dark":"light"},[]);function flip(){const d=!dark;setDark(d);document.documentElement.dataset.theme=d?"dark":"light";localStorage.setItem("tokos-data-theme",d?"dark":"light")}return <button className="icon-btn" onClick={flip} aria-label={`Switch to ${dark?"light":"dark"} theme`}>{dark?<Sun size={15}/>:<Moon size={15}/>}</button>}

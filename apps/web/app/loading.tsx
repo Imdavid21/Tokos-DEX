@@ -1,0 +1,1 @@
+export default function Loading(){return <div className="page"><div className="skeleton" style={{height:34,width:260,marginBottom:18}}/><div className="skeleton" style={{height:88,marginBottom:1}}/><div className="skeleton" style={{height:360}}/></div>}

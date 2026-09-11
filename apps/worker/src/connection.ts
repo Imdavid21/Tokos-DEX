@@ -1,0 +1,1 @@
+export function redisConnection(urlString:string){const u=new URL(urlString);return{host:u.hostname,port:Number(u.port||6379),username:u.username||undefined,password:u.password||undefined,tls:u.protocol==="rediss:"?{}:undefined,maxRetriesPerRequest:null as null};}

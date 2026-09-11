@@ -1,0 +1,12 @@
+import{Queue,Worker}from"bullmq";import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestOneDeltaDepth,ingestOneDeltaLatest,ingestPendleMarkets,ingestPendleDepth,markStale}from"./ingest.js";import{redisConnection}from"./connection.js";
+const env=loadServerEnv(),connection=redisConnection(env.REDIS_URL),queue=new Queue("tokos-data-ingestion",{connection}),opts={attempts:5,backoff:{type:"exponential"as const,delay:2000},removeOnComplete:100,removeOnFail:1000};
+await queue.upsertJobScheduler("onedelta-latest-60s",{every:60000},{name:"onedelta-latest",data:{},opts});
+await queue.upsertJobScheduler("pendle-markets-5m",{every:300000},{name:"pendle-markets",data:{},opts});
+await queue.upsertJobScheduler("onedelta-depth-15m",{every:900000},{name:"onedelta-depth",data:{notionalUsd:100000},opts});
+await queue.upsertJobScheduler("onedelta-comparables-30m",{every:1800000},{name:"onedelta-comparables",data:{},opts});
+await queue.upsertJobScheduler("stale-monitor-60s",{every:60000},{name:"stale-monitor",data:{},opts});
+await queue.upsertJobScheduler("pendle-history-1h",{every:3600000},{name:"pendle-history",data:{},opts});
+await queue.upsertJobScheduler("pendle-depth-30m",{every:1800000},{name:"pendle-depth",data:{},opts});
+const worker=new Worker("tokos-data-ingestion",async job=>{switch(job.name){case"onedelta-latest":return ingestOneDeltaLatest(env);case"pendle-markets":return ingestPendleMarkets(env);case"onedelta-depth":return ingestOneDeltaDepth(env,Number(job.data.notionalUsd??100000));case"onedelta-comparables":return ingestOneDeltaComparables(env);case"pendle-history":return backfillPendleHistory(env);case"pendle-depth":return ingestPendleDepth(env);case"stale-monitor":return markStale(env);default:throw new Error(`Unknown job ${job.name}`)}},{connection,concurrency:env.WORKER_CONCURRENCY});
+worker.on("completed",job=>console.log(JSON.stringify({level:"info",job:job.name,id:job.id,event:"completed"})));worker.on("failed",(job,e)=>console.error(JSON.stringify({level:"error",job:job?.name,id:job?.id,event:"failed",error:e.message})));
+async function shutdown(){await worker.close();await queue.close();process.exit(0)}process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown);

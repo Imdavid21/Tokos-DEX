@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{decodeCursor,encodeCursor,finiteOrNull}from"../src/lib.js";describe("api utilities",()=>{it("cursor",()=>expect(decodeCursor<{offset:number}>(encodeCursor({offset:20}))?.offset).toBe(20));it("finite",()=>{expect(finiteOrNull("bad")).toBeNull();expect(finiteOrNull("1.2")).toBe(1.2)})});

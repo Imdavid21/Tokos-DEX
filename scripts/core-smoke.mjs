@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+const fixed=(apy,d)=>Math.pow(1+apy,d/365)-1;
+const floating=(apr,d)=>apr*d/365;
+const basis=(a,b)=>Math.round((a-b)*10000);
+const pct=(x,v)=>v.length?100*v.filter(n=>n<=x).length/v.length:null;
+assert.equal(basis(.0684,.0569),115);
+assert.ok(Math.abs(floating(.0569,90)-.0140301)<1e-6);
+assert.ok(fixed(.0684,90)>0);
+assert.equal(pct(2,[1,2,3,4]),50);
+console.log("core financial smoke tests passed");
