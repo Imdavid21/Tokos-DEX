@@ -38,3 +38,9 @@ test("research flow works with live normalized data",async({page,request})=>{
  await page.goto("/datasets");
  await expect(page.getByRole("heading",{name:"Datasets"})).toBeVisible();
 });
+
+test("stale warning is visible when normalized observations expire",async({page})=>{
+ test.skip(process.env.STALE_BROWSER_TEST!=="1","stale-state pass runs after the live research flow");
+ await page.goto("/");
+ await expect(page.getByText(/Some observations are stale/)).toBeVisible();
+});
