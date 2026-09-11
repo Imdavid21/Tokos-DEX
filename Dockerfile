@@ -4,7 +4,7 @@ WORKDIR /app
 ENV NODE_ENV=development
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN ln -sf /app/node_modules/.bin/tsc /usr/local/bin/tsc
+RUN printf '#!/bin/sh\nexec node /app/node_modules/typescript/bin/tsc "$@"\n' > /usr/local/bin/tsc && chmod +x /usr/local/bin/tsc
 RUN pnpm build
 
 FROM node:24.21.0-bookworm-slim AS runtime
