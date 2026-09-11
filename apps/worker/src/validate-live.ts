@@ -1,11 +1,18 @@
-import{loadServerEnv}from"@tokos-data/config";import{closeDb,dbPool}from"@tokos-data/db";import{backfillPendleHistory,ingestOneDeltaLatest,ingestPendleMarkets,markStale,services}from"./ingest.js";
+import{loadServerEnv}from"@tokos-data/config";import{closeDb,dbPool,Repository}from"@tokos-data/db";import{normalizeOneDeltaMarket,payloadHash}from"@tokos-data/providers";import{backfillPendleHistory,ingestPendleMarkets,markStale,services}from"./ingest.js";
 
 const env=loadServerEnv();
-const db=dbPool(env.DATABASE_URL);
+const db=dbPool(env.DATABASE_URL),repo=new Repository(db);
 const fail=(message:string):never=>{throw new Error(`live validation failed: ${message}`)};
 
+async function ingestOneDeltaSample(){
+ const{oneDelta}=services(env),chains=await oneDelta.chains(),chain=chains.find(c=>c.chainId==="1")??chains[0];if(!chain)fail("1delta returned no chains");
+ const lenders=await oneDelta.lenders([chain.chainId]),keys=[...new Set(lenders.map(r=>r.lenderInfo.key))].slice(0,12);let markets=0,successfulLenders=0;const failedLenders:string[]=[];
+ for(const key of keys){try{const response=await oneDelta.latest([chain.chainId],[key],{terms:"digest",attempts:2});await repo.insertProviderObservation({provider:"1delta",endpoint:"/data/lending/latest",requestFingerprint:`live-validation:${chain.chainId}:${key}`,httpStatus:response.status,success:true,payload:response.raw,payloadHash:payloadHash(response.raw)});let lenderMarkets=0;for(const item of response.parsed.data.items)for(const source of item.markets){const n=normalizeOneDeltaMarket(item,source,chain.name);await repo.transaction(async c=>{await repo.upsertChain(n.chain,c);await repo.upsertAsset(n.asset,c);await repo.upsertProtocol(n.protocol,c);await repo.upsertMarket(n.market,{termSheet:source.termSheet??null},c);await repo.insertSnapshot(n.snapshot,c)});markets++;lenderMarkets++;}if(lenderMarkets>0)successfulLenders++;if(successfulLenders>=4&&markets>=8)break;}catch(error){failedLenders.push(key);const payload={error:error instanceof Error?error.message:String(error),lender:key};await repo.insertProviderObservation({provider:"1delta",endpoint:"/data/lending/latest",requestFingerprint:`live-validation:${chain.chainId}:${key}`,httpStatus:0,success:false,payload,payloadHash:payloadHash(payload),errorCode:null});}}
+ if(markets<1)fail(`1delta sample produced no normalized markets; failed lenders=${failedLenders.join(",")}`);return{chain:chain.chainId,lendersTried:successfulLenders+failedLenders.length,successfulLenders,failedLenders,markets};
+}
+
 try{
- const oneDelta=await ingestOneDeltaLatest(env);if(oneDelta.markets<1)fail("1delta returned no normalized markets");
+ const oneDelta=await ingestOneDeltaSample();
  const pendle=await ingestPendleMarkets(env);if(pendle.markets<1)fail("Pendle returned no normalized markets");
  await markStale(env);
 
