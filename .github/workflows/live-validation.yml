@@ -64,7 +64,7 @@ jobs:
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 pnpm --filter @tokos-data/web test:e2e --grep-invert "stale warning"
           mkdir -p qa-artifacts/visual
           cp -R apps/web/test-results/. qa-artifacts/visual/ || true
-          STALE_LENDING_SECONDS=0 STALE_PENDLE_SECONDS=0 pnpm --filter @tokos-data/worker exec tsx src/mark-stale-once.ts
+          STALE_LENDING_SECONDS=1 STALE_PENDLE_SECONDS=1 pnpm --filter @tokos-data/worker exec tsx src/mark-stale-once.ts
           STALE_BROWSER_TEST=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 pnpm --filter @tokos-data/web test:e2e --grep "stale warning"
           mkdir -p qa-artifacts/stale
           cp -R apps/web/test-results/. qa-artifacts/stale/ || true
