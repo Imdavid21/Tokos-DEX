@@ -1,6 +1,6 @@
 import type {NextConfig} from "next";
 const api=(process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/,"");
-const production=process.env.NODE_ENV==="production";
+const production=process.env.NODE_ENV==="production";\nconst basePath=(process.env.NEXT_PUBLIC_BASE_PATH??"").replace(/\\\/$/,"");
 const csp=["default-src 'self'",`script-src 'self' 'unsafe-inline'${production?"":" 'unsafe-eval'"}`,"style-src 'self' 'unsafe-inline'","img-src 'self' data: https:","font-src 'self' data:","connect-src 'self' https: http://localhost:* http://127.0.0.1:*","object-src 'none'","base-uri 'self'","frame-ancestors 'none'","form-action 'self'",...(production?["upgrade-insecure-requests"]:[])].join("; ");
 const securityHeaders=[
   {key:"Content-Security-Policy",value:csp},
