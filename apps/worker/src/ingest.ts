@@ -1,4 +1,4 @@
-import{createHash}from"node:crypto";import{basisBps,METHODOLOGY_VERSION}from"@tokos-data/analytics";import type{ServerEnv}from"@tokos-data/config";import{chainAllowlist,rateAssetGroups,rateHorizonGrid,rateNotionalGrid}from"@tokos-data/config";import{dbPool,Repository}from"@tokos-data/db";import{OneDeltaClient,PendleClient,chunkLenders,normalizeOneDeltaMarket,normalizePendleHistoryPoint,normalizePendleMarket,payloadHash,pctToDecimal}from"@tokos-data/providers";
+import{createHash}from"node:crypto";import{basisBps,METHODOLOGY_VERSION}from"@tokos-data/analytics";import type{ServerEnv}from"@tokos-data/config";import{chainAllowlist,rateAssetGroups,rateHorizonGrid,rateNotionalGrid}from"@tokos-data/config";import{dbPool,Repository}from"@tokos-data/db";import{OneDeltaClient,PendleClient,ProviderError,chunkLenders,normalizeOneDeltaMarket,normalizePendleHistoryPoint,normalizePendleMarket,payloadHash,pctToDecimal}from"@tokos-data/providers";
 const fingerprint=(x:unknown)=>createHash("sha256").update(JSON.stringify(x)).digest("hex");
 type PendleTokenMeta={address?:string;decimals?:number;price?:{usd?:number|null};};
 type PendleMarketMeta={underlyingAsset?:PendleTokenMeta;sy?:PendleTokenMeta;pt?:PendleTokenMeta;};
@@ -8,11 +8,13 @@ async function refresh(repo:Repository){for(const n of["mv_latest_markets","mv_a
 export async function ingestOneDeltaLatest(env:ServerEnv){
  const{repo,oneDelta}=services(env);try{
   const discovered=await oneDelta.chains(),allow=chainAllowlist(env),chains=allow?discovered.filter(c=>allow.includes(c.chainId)):discovered,ids=chains.map(c=>c.chainId),names=new Map(chains.map(c=>[c.chainId,c.name]));
-  const lenderRows=await oneDelta.lenders(ids),keys=[...new Set(lenderRows.map(r=>r.lenderInfo.key))];let count=0;
-  for(const batch of chunkLenders(keys,20)){const response=await oneDelta.latest(ids,batch,{terms:"digest"});await repo.insertProviderObservation({provider:"1delta",endpoint:"/data/lending/latest",requestFingerprint:fingerprint({chains:ids,lenders:batch}),httpStatus:response.status,success:true,payload:response.raw,payloadHash:payloadHash(response.raw)});
-   for(const item of response.parsed.data.items)for(const source of item.markets){const n=normalizeOneDeltaMarket(item,source,names.get(item.chainId)??"");await repo.transaction(async c=>{await repo.upsertChain(n.chain,c);await repo.upsertAsset(n.asset,c);await repo.upsertProtocol(n.protocol,c);await repo.upsertMarket(n.market,{termSheet:source.termSheet??null},c);await repo.insertSnapshot(n.snapshot,c)});count++;}
-  }
-  await repo.markProviderHealth("1delta",true);await refresh(repo);return{markets:count,chains:chains.length,lenders:keys.length};
+  const lenderRows=await oneDelta.lenders(ids),keys=[...new Set(lenderRows.map(r=>r.lenderInfo.key))];let count=0,successfulBatches=0;const failedLenders:string[]=[];
+  const processBatch=async(batch:string[]):Promise<void>=>{try{const response=await oneDelta.latest(ids,batch,{terms:"digest"});successfulBatches++;await repo.insertProviderObservation({provider:"1delta",endpoint:"/data/lending/latest",requestFingerprint:fingerprint({chains:ids,lenders:batch}),httpStatus:response.status,success:true,payload:response.raw,payloadHash:payloadHash(response.raw)});
+    for(const item of response.parsed.data.items)for(const source of item.markets){const n=normalizeOneDeltaMarket(item,source,names.get(item.chainId)??"");await repo.transaction(async c=>{await repo.upsertChain(n.chain,c);await repo.upsertAsset(n.asset,c);await repo.upsertProtocol(n.protocol,c);await repo.upsertMarket(n.market,{termSheet:source.termSheet??null},c);await repo.insertSnapshot(n.snapshot,c)});count++;}
+   }catch(e){if(batch.length>1){const mid=Math.ceil(batch.length/2);await processBatch(batch.slice(0,mid));await processBatch(batch.slice(mid));return;}const lender=batch[0];if(lender)failedLenders.push(lender);const status=e instanceof ProviderError?(e.status??0):0,code=e instanceof ProviderError?e.code:null,payload={error:e instanceof Error?e.message:String(e),lender:lender??null};await repo.insertProviderObservation({provider:"1delta",endpoint:"/data/lending/latest",requestFingerprint:fingerprint({chains:ids,lenders:batch}),httpStatus:status,success:false,payload,payloadHash:payloadHash(payload),errorCode:code});}}
+  for(const batch of chunkLenders(keys,20))await processBatch(batch);
+  if(successfulBatches===0)throw new Error(`1delta latest failed for all ${keys.length} discovered lender keys`);
+  await repo.markProviderHealth("1delta",true);await refresh(repo);return{markets:count,chains:chains.length,lenders:keys.length,failedLenders};
  }catch(e){await repo.markProviderHealth("1delta",false,e instanceof Error?e.message:String(e));throw e}
 }
 export async function ingestPendleMarkets(env:ServerEnv){
