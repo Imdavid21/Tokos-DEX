@@ -4,10 +4,11 @@ import {useEffect,useId,useMemo,useRef} from "react";
 
 type Point=[string|number,number|null];
 type Series={name:string;data:Point[]};
-type NumberFormat="percent"|"usd"|"number";
+type NumberFormat="percent"|"usd"|"bps"|"number";
 
 function formatter(kind:NumberFormat){return(v:number)=>{
   if(kind==="percent")return `${(v*100).toFixed(2)}%`;
+  if(kind==="bps")return `${v.toFixed(0)} bp`;
   if(kind==="usd")return Math.abs(v)>=1e9?`$${(v/1e9).toFixed(1)}B`:Math.abs(v)>=1e6?`$${(v/1e6).toFixed(1)}M`:Math.abs(v)>=1e3?`$${(v/1e3).toFixed(1)}K`:`$${v.toFixed(0)}`;
   return v.toLocaleString(undefined,{maximumFractionDigits:2});
 }}
