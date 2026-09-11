@@ -1,5 +1,0 @@
-export * from './TouchableArea/TouchableArea'
-export type { ModifierPressProps, TouchableAreaProps } from './TouchableArea/types'
-export { isModifierClick, useModifierPress } from './TouchableArea/useModifierPress'
-export type { TouchableTextLinkProps } from './TouchableTextLink/TouchableTextLink'
-export * from './TouchableTextLink/TouchableTextLink'
