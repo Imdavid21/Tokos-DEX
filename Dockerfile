@@ -4,7 +4,10 @@ WORKDIR /app
 ENV NODE_ENV=development
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN printf '#!/bin/sh\nexec node /app/node_modules/typescript/bin/tsc "$@"\n' > /usr/local/bin/tsc && chmod +x /usr/local/bin/tsc
+RUN TSC="$(find /app/node_modules/.pnpm -type f \( -path '*/node_modules/@typescript/typescript6/bin/tsc' -o -path '*/node_modules/@typescript/typescript6/lib/tsc.js' \) | head -n1)" \
+ && test -n "$TSC" \
+ && printf '#!/bin/sh\nexec node "%s" "$@"\n' "$TSC" > /usr/local/bin/tsc \
+ && chmod +x /usr/local/bin/tsc
 RUN pnpm build
 
 FROM node:24.21.0-bookworm-slim AS runtime
