@@ -2,6 +2,8 @@ name: ci
 on:
   pull_request:
   push: { branches: [main] }
+permissions:
+  contents: write
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -27,18 +29,32 @@ jobs:
       PENDLE_API_BASE_URL: https://api-v2.pendle.finance/core
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
       - uses: pnpm/action-setup@v4
         with: { version: 12.3.4, run_install: false }
       - uses: actions/setup-node@v5
         with:
           node-version: 24.21.0
           package-manager-cache: false
-      - run: pnpm install --no-frozen-lockfile
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pnpm-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: error
+      - name: Install dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+      - name: Commit generated lockfile once
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          if git ls-files --error-unmatch pnpm-lock.yaml >/dev/null 2>&1; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore: lock dependencies"
+          git push origin HEAD:${{ github.head_ref }}
       - run: pnpm peers check
       - run: pnpm db:migrate
       - run: pnpm lint
