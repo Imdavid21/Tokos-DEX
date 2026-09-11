@@ -20,7 +20,8 @@ for(const viewport of viewports)for(const theme of["light","dark"] as const){
    const layout=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth,brokenImages:[...document.images].filter(img=>img.complete&&img.naturalWidth===0).length}));
    expect(layout.brokenImages,`${route} has broken images`).toBe(0);
    expect(layout.scrollWidth,`${route} overflows viewport`).toBeLessThanOrEqual(layout.innerWidth+1);
-   const slug=route==="/"?"home":route.split("?")[0].replace(/^\//,"").replaceAll("/","-");
+   const routePath=route.split("?")[0]??"";
+   const slug=route==="/"?"home":routePath.replace(/^\//,"").replaceAll("/","-");
    await page.screenshot({path:testInfo.outputPath(`${viewport.name}-${theme}-${slug}.png`),fullPage:true});
   }
  });
