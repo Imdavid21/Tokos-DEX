@@ -1,4 +1,5 @@
 import{spawn,spawnSync}from"node:child_process";
+const ensure=spawnSync("pnpm",["--filter","@tokos-data/db","ensure-review-db"],{stdio:"inherit",env:process.env});if(ensure.status!==0)process.exit(ensure.status??1);
 const run=spawnSync("pnpm",["db:migrate"],{stdio:"inherit",env:process.env});if(run.status!==0)process.exit(run.status??1);
 const common={...process.env,NODE_ENV:"production",APP_ENV:"production",API_URL:"http://127.0.0.1:4000",NEXT_PUBLIC_API_URL:"http://127.0.0.1:4000",API_PORT:"4000"};
 const children=[
