@@ -44,6 +44,7 @@ jobs:
           node-version: 24.21.0
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:packages
       - run: pnpm db:migrate
       - name: Validate live providers and normalized data
         run: pnpm --filter @tokos-data/worker validate:live
