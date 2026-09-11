@@ -1,4 +1,4 @@
-import type {Metadata} from "next";import "./globals.css";import {Shell} from "@/components/Shell";
+import type {Metadata} from "next";import "./globals.css";import "./analytics.css";import {Shell} from "@/components/Shell";
 export const metadata:Metadata={title:{default:"Tokos Data | Onchain Rates Intelligence",template:"%s | Tokos Data"},description:"Fixed, floating, liquidity, capacity, and relative value across DeFi.",metadataBase:new URL(process.env.NEXT_PUBLIC_APP_URL??"https://data.tokos.fun")};
 const theme=`(()=>{try{const s=localStorage.getItem('tokos-data-theme');const d=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light'}catch{}})()`;
 export default function Layout({children}:{children:React.ReactNode}){return <html lang="en" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{__html:theme}}/></head><body><Shell>{children}</Shell></body></html>}

@@ -7,7 +7,7 @@ const viewports=[
  {name:"mobile-390",width:390,height:844},
  {name:"mobile-430",width:430,height:932}
 ] as const;
-const pages=["/","/markets","/rates?asset=usdc&notional=100000&horizon=90","/datasets"] as const;
+const pages=["/","/markets","/rates?asset=usdc&notional=100000&horizon=90","/yield-curve?asset=usdc&notional=100000","/basis","/execution","/datasets"] as const;
 
 for(const viewport of viewports)for(const theme of["light","dark"] as const){
  test(`visual QA ${viewport.name} ${theme}`,async({page},testInfo)=>{
