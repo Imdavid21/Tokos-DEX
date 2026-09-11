@@ -14,7 +14,8 @@
     "migrate": "tsx src/migrate.ts",
     "refresh-views": "tsx src/refresh-views.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "ensure-review-db": "tsx src/ensure-review-db.ts"
   },
   "devDependencies": {
     "@types/pg": "^8.15.5"
