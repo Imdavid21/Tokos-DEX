@@ -1,0 +1,1 @@
+import Link from "next/link";export default function NotFound(){return <div className="page"><div className="empty"><div><h2>Not found</h2><p>The requested Tokos Data entity does not exist.</p><Link className="btn" href="/markets" style={{marginTop:14}}>Browse markets</Link></div></div></div>}

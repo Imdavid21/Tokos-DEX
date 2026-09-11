@@ -1,0 +1,2 @@
+import{describe,expect,it}from"vitest";import{chunkLenders}from"../src/onedelta.js";import{pctToDecimal,slugify}from"../src/normalize.js";
+describe("provider invariants",()=>{it("max 20 lenders",()=>{const x=chunkLenders(Array.from({length:47},(_,i)=>`L${i}`));expect(x).toHaveLength(3);expect(Math.max(...x.map(c=>c.length))).toBeLessThanOrEqual(20)});it("APR percent normalization",()=>expect(pctToDecimal(5.82)).toBeCloseTo(.0582));it("stable slug",()=>expect(slugify("Aave V3 Prime")).toBe("aave-v3-prime"));});

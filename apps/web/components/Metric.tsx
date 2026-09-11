@@ -1,0 +1,1 @@
+export function Metric({label,value,meta,className=""}:{label:string;value:string;meta?:string|undefined;className?:string|undefined}){return <div className={`metric ${className}`}><div className="metric-label">{label}</div><div className="metric-value">{value}</div>{meta&&<div className="metric-meta">{meta}</div>}</div>}

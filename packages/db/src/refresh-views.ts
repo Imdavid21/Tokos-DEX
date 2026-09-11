@@ -1,0 +1,1 @@
+import{dbPool,closeDb}from"./pool.js";const db=dbPool();for(const n of["mv_latest_markets","mv_asset_summary","mv_protocol_summary","mv_chain_summary","mv_rate_movers"])await db.query(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${n}`);await closeDb();
