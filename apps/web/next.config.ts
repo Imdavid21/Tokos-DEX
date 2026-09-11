@@ -13,6 +13,7 @@ const securityHeaders=[
 ];
 const config:NextConfig={
   poweredByHeader:false,
+  allowedDevOrigins:["127.0.0.1","localhost"],
   ...(basePath?{basePath}:{}),
   async rewrites(){return [{source:"/api/v1/:path*",destination:`${api}/v1/:path*`}]},
   async headers(){return [{source:"/:path*",headers:securityHeaders}]}
