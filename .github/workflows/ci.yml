@@ -34,6 +34,12 @@ jobs:
           node-version: 24.21.0
           package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-lockfile
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+      - run: pnpm peers check
       - run: pnpm db:migrate
       - run: pnpm lint
       - run: pnpm typecheck
