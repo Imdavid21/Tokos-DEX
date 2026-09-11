@@ -21,7 +21,9 @@ CREATE INDEX IF NOT EXISTS markets_chain_status_idx ON markets(chain_id,status);
 CREATE INDEX IF NOT EXISTS market_snapshots_market_time_idx ON market_snapshots(market_id,observed_at DESC);
 CREATE INDEX IF NOT EXISTS execution_depth_lookup_idx ON execution_depth_snapshots(market_id,notional_usd,horizon_days,observed_at DESC);
 CREATE INDEX IF NOT EXISTS basis_lookup_idx ON basis_snapshots(asset_id,horizon_days,notional_usd,observed_at DESC);
-CREATE INDEX IF NOT EXISTS assets_search_idx ON assets USING gin ((symbol||' '||name||' '||array_to_string(aliases,' ')) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS assets_symbol_search_idx ON assets USING gin (symbol gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS assets_name_search_idx ON assets USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS assets_aliases_idx ON assets USING gin (aliases);
 CREATE INDEX IF NOT EXISTS protocols_search_idx ON protocols USING gin ((name||' '||slug) gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS markets_search_idx ON markets USING gin ((market_name||' '||id||' '||provider_market_id) gin_trgm_ops);
 
