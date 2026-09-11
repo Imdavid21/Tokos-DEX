@@ -50,7 +50,7 @@ jobs:
         run: pnpm --filter @tokos-data/worker validate:live
       - name: Install Chromium
         run: pnpm --filter @tokos-data/web exec playwright install --with-deps chromium
-      - name: Browser smoke against populated database
+      - name: Browser, responsive, theme, and stale-state QA
         run: |
           pnpm --filter @tokos-data/api dev > /tmp/tokos-api.log 2>&1 &
           API_PID=$!
@@ -61,4 +61,17 @@ jobs:
           curl -fsS http://127.0.0.1:4000/health >/dev/null
           for i in $(seq 1 90); do curl -fsS http://127.0.0.1:3000/ >/dev/null && break; sleep 1; done
           curl -fsS http://127.0.0.1:3000/ >/dev/null
-          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 pnpm --filter @tokos-data/web test:e2e
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 pnpm --filter @tokos-data/web test:e2e --grep-invert "stale warning"
+          mkdir -p qa-artifacts/visual
+          cp -R apps/web/test-results/. qa-artifacts/visual/ || true
+          STALE_LENDING_SECONDS=0 STALE_PENDLE_SECONDS=0 pnpm --filter @tokos-data/worker exec tsx src/mark-stale-once.ts
+          STALE_BROWSER_TEST=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 pnpm --filter @tokos-data/web test:e2e --grep "stale warning"
+          mkdir -p qa-artifacts/stale
+          cp -R apps/web/test-results/. qa-artifacts/stale/ || true
+      - name: Upload QA screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tokos-data-qa
+          path: qa-artifacts
+          if-no-files-found: warn
