@@ -1,6 +1,6 @@
 "use client";
 import * as echarts from "echarts";
-import {useEffect,useId,useRef} from "react";
+import {useEffect,useId,useMemo,useRef} from "react";
 
 type Point=[string|number,number|null];
 type Series={name:string;data:Point[]};
@@ -45,11 +45,15 @@ export function TimeChart({series,yFormat="percent",height=300}:{series:Series[]
     },true);
     render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
   },[series,yFormat]);
-  return <ChartFrame label={`Time series chart: ${series.map(s=>s.name).join(", ")}`} onCsv={()=>downloadCsv(`tokos-chart-${id}.csv`,series)}><div ref={ref} className="chart" style={{height}} role="img"/></ChartFrame>
+  return <ChartFrame label={`Time series chart: ${series.map(s=>s.name).join(", ")}`} onCsv={()=>downloadCsv(`tokos-chart-${id.replace(/:/g,"")}.csv`,series)}><div ref={ref} className="chart" style={{height}} role="img"/></ChartFrame>
 }
 
 export function CurveChart({points}:{points:Array<{tenorDays:number;fixed:number|null;floating:number|null}>}){
-  const ref=useRef<HTMLDivElement>(null);const series:Series[]=[{name:"Fixed",data:points.filter(p=>p.fixed!=null).map(p=>[p.tenorDays,p.fixed])},{name:"Floating",data:points.filter(p=>p.floating!=null).map(p=>[p.tenorDays,p.floating])}];
+  const ref=useRef<HTMLDivElement>(null);
+  const series=useMemo<Series[]>(()=>[
+    {name:"Fixed",data:points.filter(p=>p.fixed!=null).map(p=>[p.tenorDays,p.fixed])},
+    {name:"Floating",data:points.filter(p=>p.floating!=null).map(p=>[p.tenorDays,p.floating])}
+  ],[points]);
   useEffect(()=>{
     if(!ref.current)return;const chart=echarts.init(ref.current);const format=formatter("percent");const render=()=>chart.setOption({
       animationDuration:220,color:[css("--green"),css("--info")],tooltip:{trigger:"axis",axisPointer:{type:"cross"},valueFormatter:format,confine:true},legend:{top:0,right:0,textStyle:{color:css("--muted"),fontSize:10}},grid:{left:56,right:18,top:30,bottom:38},
@@ -57,7 +61,7 @@ export function CurveChart({points}:{points:Array<{tenorDays:number;fixed:number
       yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:10,formatter:format},splitLine:{lineStyle:{color:css("--border")}}},
       dataZoom:[{type:"inside",filterMode:"none"}],series:[{name:"Fixed",type:"line",showSymbol:true,symbolSize:5,data:series[0]?.data??[]},{name:"Floating",type:"line",showSymbol:false,data:series[1]?.data??[]}]
     },true);render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
-  },[points]);
+  },[series]);
   return <ChartFrame label="Fixed and floating rate curve" onCsv={()=>downloadCsv("tokos-yield-curve.csv",series)}><div ref={ref} className="chart" role="img"/></ChartFrame>
 }
 
