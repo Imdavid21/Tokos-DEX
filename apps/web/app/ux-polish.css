@@ -1,0 +1,90 @@
+:root{
+  --header:58px;
+  --rail:224px;
+}
+
+html,body{font-size:13.5px;line-height:1.46}
+.topbar{grid-template-columns:var(--rail) minmax(320px,620px) 1fr}
+.brand{padding:0 22px;font-size:14.5px}
+.search-trigger{height:34px;padding:0 11px}
+.top-actions{padding:0 20px}
+.health{font-size:11.5px}
+.rail{padding:14px 9px}
+.nav-label{font-size:10.5px;padding:15px 11px 7px}
+.nav-link{height:34px;padding:0 11px;gap:10px;font-size:12.5px}
+
+.page{padding:28px 32px 72px;max-width:1760px}
+.page-head{min-height:38px;margin-bottom:18px;align-items:center}
+.page-title{font-size:25px;line-height:32px;font-weight:620}
+.page-meta{font-size:11.5px}
+.page-sub{font-size:12.5px;line-height:1.5}
+
+.metrics{grid-auto-rows:1fr}
+.metric{min-height:84px;padding:13px 16px}
+.metric-label{font-size:10.5px;margin-bottom:9px}
+.metric-value{font-size:clamp(19px,1.3vw,22px);line-height:27px;font-weight:600}
+.metric-meta{font-size:10.5px}
+
+.section{margin-top:28px}
+.section-title{font-size:15.5px;line-height:22px;margin:0 0 12px;font-weight:650}
+.panel{min-width:0}
+.panel-head{height:44px;padding:0 15px;min-width:0}
+.panel-head>div{min-width:0}
+.panel-title{font-size:12.5px;font-weight:650}
+.panel-note{font-size:10.5px;line-height:1.35}
+.panel-body{padding:18px;min-width:0}
+.panel.section + .panel{margin-top:12px;border-top:1px solid var(--border)}
+
+.analytics-grid{gap:12px}
+.analytics-grid>.panel{border:1px solid var(--border)!important}
+.overview-secondary{border-top:0}
+
+.chart-toolbar{height:40px;padding:0 10px;gap:5px}
+.chart-action{height:28px;padding:0 9px;font-size:10.5px}
+.chart{height:336px}
+.chart.small{height:252px}
+
+.table-wrap{scrollbar-gutter:stable both-edges;max-width:100%}
+table.data{font-size:12.5px}
+table.data th{height:36px;padding:0 10px;font-size:10.5px}
+table.data td{height:44px;padding:0 10px}
+.identity{font-weight:600}
+.subtle{font-size:10.5px}
+
+.input,.select,.btn{height:34px;font-size:11.5px;padding:0 10px}
+.filter-bar{margin-bottom:14px}
+.parameter-bar{min-height:42px}
+.param{height:41px;padding:0 13px}
+.param span{font-size:10.5px}
+.param select{font-size:12.5px}
+
+.state,.empty{min-height:210px;padding:32px}
+.state h2,.empty h2{font-size:15.5px}
+.state p,.empty p{font-size:11.5px;line-height:1.5}
+
+@media(max-width:1200px){
+  :root{--rail:208px}
+  .page{padding:24px 24px 64px}
+  .analytics-grid.three{grid-template-columns:1fr}
+}
+
+@media(max-width:800px){
+  html,body{font-size:13px}
+  .topbar{grid-template-columns:48px minmax(0,1fr) 48px}
+  .search-trigger{min-width:0}
+  .page{padding:18px 14px 52px;max-width:100%;overflow-x:clip}
+  .page-head{align-items:flex-start;gap:8px;flex-direction:column}
+  .page-title{font-size:22px;line-height:28px}
+  .panel-head{height:auto;min-height:44px;padding:8px 12px;flex-wrap:wrap;align-items:center}
+  .panel-head>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap;max-width:100%}
+  .panel-head .history-note{margin-left:0}
+  .panel-head>.chart-toolbar{width:100%;height:32px;justify-content:flex-start;overflow-x:auto;padding:0;border:0}
+  .panel-note{white-space:normal;overflow-wrap:anywhere}
+  .panel-body{padding:14px;max-width:100%;overflow:hidden}
+  .analytics-grid{gap:10px;max-width:calc(100% + 24px)}
+  .analytics-grid>.panel{max-width:100%;overflow:hidden}
+  .metric{min-height:76px;padding:11px 12px}
+  .metric-value{font-size:19px}
+  .chart-shell,.chart{max-width:100%;min-width:0}
+  .chart{height:300px}
+}

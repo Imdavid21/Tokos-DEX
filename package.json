@@ -18,6 +18,7 @@
     "db:migrate": "pnpm --filter @tokos-data/db migrate",
     "db:refresh-views": "pnpm --filter @tokos-data/db refresh-views",
     "ingest:once": "pnpm --filter @tokos-data/worker ingest:once",
+    "start:railway:full": "node scripts/start-railway-full.mjs",
     "smoke:core": "node scripts/core-smoke.mjs",
     "build:packages": "pnpm --filter \"./packages/**\" -r build"
   },

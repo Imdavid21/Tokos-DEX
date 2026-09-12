@@ -1,20 +1,26 @@
 # Tokos Data
 
-> Repository note: `Imdavid21/Tokos-DEX` was repurposed after the standalone DEX was decommissioned. The old DEX source remains only in git history. Tokos Data is isolated from Tokos V2 and from the historical DEX implementation.
+`Imdavid21/Tokos-DEX` is now the Tokos Data repository. The former standalone DEX runtime is not present in the current tree; legacy code exists only in git history.
 
-Agents must read [`AGENTS.md`](AGENTS.md) first. The canonical cross-project handoff is maintained in `Imdavid21/tokos/docs/PROJECT_HANDOFF_2026-09-12.md`.
+Agents must read [`AGENTS.md`](AGENTS.md) first, then `docs/KNOWLEDGE_TRANSFER.md` and `docs/TOKOS_DATA_MASTER_SPEC.md`. The canonical cross-project handoff is maintained in `Imdavid21/tokos/docs/FULL_KNOWLEDGE_TRANSFER_2026-09-12.md`.
 
-Tokos Data is a standalone onchain rates intelligence platform implemented from
-`docs/TOKOS_DATA_MASTER_SPEC.md`. Tokos V2 is not imported or modified.
+Tokos Data is a standalone onchain rates and yield intelligence platform. Tokos V2 is not imported or modified.
 
-V0 routes: `/`, `/markets`, `/market/:id`, `/asset/:slug`, `/protocol/:slug`,
-`/chain/:slug`, `/rates`, `/compare`, `/datasets`, `/datasets/:slug`.
+Core routes include `/`, `/markets`, `/market/:id`, `/assets`, `/asset/:slug`, `/protocols`, `/protocol/:slug`, `/chains`, `/chain/:slug`, `/rates`, `/yield-curve`, `/basis`, `/execution`, `/correlations`, `/compare`, `/datasets`, and `/metrics`.
 
-Architecture: providers -> workers -> PostgreSQL/Timescale -> Fastify API -> Next.js web,
-with Redis/BullMQ jobs. Production values come only from normalized persisted observations.
-The web never calls 1delta or Pendle directly and never substitutes fabricated rates.
+Architecture:
 
-Public production is exposed at `https://tokos.fun/data` through the main `tokos-web` reverse proxy. The data runtime itself deploys separately to Railway service `tokos-dex`.
+```text
+providers
+-> ingestion/workers
+-> PostgreSQL/Timescale normalized observations
+-> Fastify API/read models
+-> Next.js web
+```
+
+Redis/BullMQ are used where configured. Production analytics should prefer normalized persisted observations. The web contains an explicitly labelled live Pendle fallback for resilience when the Data API/database is unavailable; it does not fabricate missing observations.
+
+Public production is exposed at `https://tokos.fun/data` through the main `tokos-web` reverse proxy. The Data web runtime deploys independently in the dedicated Railway project `tokos-data`, currently at `https://tokos-data-production.up.railway.app`.
 
 ## Local
 
@@ -29,8 +35,6 @@ pnpm ingest:once
 pnpm dev
 ```
 
-Current 1delta pagination is respected: `/data/lending/latest` always sends both `chains`
-and 1-20 `lenders`, discovered live. Pendle catalogue uses `/core/v2/markets/all`;
-history uses v3. New quote work is isolated behind the provider package for v3 POST Convert.
+Current 1delta pagination is respected: `/data/lending/latest` always sends both `chains` and 1-20 `lenders`, discovered live. Pendle catalogue uses `/core/v2/markets/all`; history uses v3. Quote/convert provider work remains isolated in the provider package.
 
-See `docs/BUILD_STATUS.md` and `docs/TOKOS_DATA_MASTER_SPEC.md`.
+See `docs/BUILD_STATUS.md`, `docs/KNOWLEDGE_TRANSFER.md`, and `docs/TOKOS_DATA_MASTER_SPEC.md`.
