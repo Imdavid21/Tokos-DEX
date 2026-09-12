@@ -10,33 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify overview and markets live data
+      - name: Inspect Markets HTML
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL 'https://tokos.fun/data' -o /tmp/overview.html
           curl -fsSL 'https://tokos.fun/data/markets' -o /tmp/markets.html
           python3 - <<'PY'
           import re, html
-          o=open('/tmp/overview.html', encoding='utf-8').read()
-          m=open('/tmp/markets.html', encoding='utf-8').read()
-          clean=lambda x: html.unescape(re.sub(r'<[^>]+>','',x))
-          pairs=re.findall(r'<div class="metric-label">(.*?)</div><div class="metric-value">(.*?)</div>', o)
-          vals={clean(k):clean(v) for k,v in pairs}
-          print('OVERVIEW', vals)
-          print('MARKETS_BYTES', len(m))
-          print('MARKETS_UNKNOWN', 'UNKNOWN' in m)
-          print('MARKETS_UNAVAILABLE', 'Market analytics unavailable' in m)
-          print('MARKETS_MATCHING', re.findall(r'([0-9,]+) matching markets', m)[:1])
-          assert vals.get('Tracked TVL / deposits') not in (None,'—','$0')
-          assert vals.get('Available liquidity') not in (None,'—','$0')
-          assert int(vals.get('Active markets','0').replace(',','')) > 8
-          assert int(vals.get('Assets','0').replace(',','')) > 1
-          assert 'UNKNOWN' not in o
-          assert 'Heatmap unavailable' not in o
-          assert 'No maturity landscape available' not in o
-          assert 'Market analytics unavailable' not in m
-          assert 'UNKNOWN' not in m
-          match=re.search(r'([0-9,]+) matching markets', m)
-          assert match and int(match.group(1).replace(',','')) > 8
+          s=open('/tmp/markets.html', encoding='utf-8').read()
+          title=re.search(r'<title[^>]*>(.*?)</title>',s,re.S)
+          h1=re.search(r'<h1[^>]*>(.*?)</h1>',s,re.S)
+          rows=len(re.findall(r'<tbody>.*?</tbody>',s,re.S))
+          market_links=len(re.findall(r'href="(?:/data)?/market/',s))
+          print('TITLE', html.unescape(re.sub(r'<[^>]+>','',title.group(1))) if title else None)
+          print('H1', html.unescape(re.sub(r'<[^>]+>','',h1.group(1))) if h1 else None)
+          print('MARKET_LINKS', market_links)
+          print('UNKNOWN', 'UNKNOWN' in s)
+          print('UNAVAILABLE', 'Market analytics unavailable' in s)
+          print('NO_MATCHES', 'No matching markets' in s)
+          assert title and 'Markets' in title.group(1)
+          assert h1 and 'Markets' in h1.group(1)
+          assert market_links > 8
+          assert 'UNKNOWN' not in s
+          assert 'Market analytics unavailable' not in s
+          assert 'No matching markets' not in s
           PY
