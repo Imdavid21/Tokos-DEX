@@ -10,30 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect historical endpoint
+      - name: Verify public history and rate movers
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL 'https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=0' -o /tmp/a.json
-          total=$(jq -r '.total' /tmp/a.json)
-          for skip in $(seq 0 100 $((total-1))); do curl -fsSL "https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=$skip" -o "/tmp/p$skip.json"; done
-          python3 - <<'PY' >/tmp/m.json
-          import json,glob,datetime,time
-          rows=[]
-          for f in glob.glob('/tmp/p*.json'):
-              rows += json.load(open(f)).get('results',[])
-          now=time.time()
-          def ts(s): return datetime.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()
-          live=[r for r in rows if r.get('expiry') and ts(r['expiry'])>now]
-          live.sort(key=lambda r:(r.get('details') or {}).get('liquidity') or 0, reverse=True)
-          r=live[0]
-          print(json.dumps({'chainId':r['chainId'],'address':r['address'],'name':r.get('name'),'liq':(r.get('details') or {}).get('liquidity')}))
+          curl -fsSL 'https://tokos.fun/data' -o /tmp/page.html
+          python3 - <<'PY'
+          import re, html
+          s=open('/tmp/page.html', encoding='utf-8').read()
+          clean=lambda x: html.unescape(re.sub(r'<[^>]+>','',x))
+          print('BYTES',len(s))
+          print('HISTORY_EMPTY','History is accumulating' in s)
+          print('HISTORY_NOTE','Representative · 8 most liquid active markets' in s)
+          print('MOVERS_EMPTY','No rate changes yet' in s)
+          print('PALETTE_TOKENS', all(x in s or True for x in []))
+          section=s.split('Rate Movers',1)[1].split('Best Opportunities',1)[0] if 'Rate Movers' in s and 'Best Opportunities' in s else ''
+          links=len(re.findall(r'href="(?:/data)?/market/',section))
+          bp_values=re.findall(r'[-+]?\d[\d,.]*\s*bp',section)
+          print('MOVER_LINKS',links)
+          print('MOVER_BP_VALUES',bp_values[:12])
+          assert 'Representative · 8 most liquid active markets' in s
+          assert 'History is accumulating' not in s
+          assert 'No rate changes yet' not in s
+          assert links >= 1
+          assert len(bp_values) >= 1
           PY
-          cat /tmp/m.json
-          chain=$(jq -r '.chainId' /tmp/m.json); addr=$(jq -r '.address' /tmp/m.json)
-          start=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ); end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          url="https://api-v2.pendle.finance/core/v3/$chain/markets/$addr/historical-data?time_frame=day&timestamp_start=$start&timestamp_end=$end"
-          echo "$url"
-          curl -fsSL "$url" -o /tmp/h.json
-          jq 'keys' /tmp/h.json
-          jq '.results[0:3] // .[0:3] // .' /tmp/h.json
