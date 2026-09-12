@@ -1,0 +1,30 @@
+name: verify-data-cutover-once
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-cutover-once.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify direct and public Data routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-delay 2 'https://tokos-data-production.up.railway.app/data' -o /tmp/direct.html
+          curl -fsSL --retry 4 --retry-delay 2 'https://tokos.fun/data' -o /tmp/public.html
+          python3 - <<'PY'
+          direct=open('/tmp/direct.html',encoding='utf-8').read()
+          public=open('/tmp/public.html',encoding='utf-8').read()
+          for name,s in [('direct',direct),('public',public)]:
+              print(name,'bytes',len(s))
+              print(name,'has_history_note','Representative · 8 most liquid active markets' in s)
+              print(name,'has_rate_movers','Rate Movers' in s)
+              assert len(s) > 20000
+              assert 'tokos data' in s.lower()
+              assert 'Rate Movers' in s
+          assert 'Representative · 8 most liquid active markets' in public
+          PY
