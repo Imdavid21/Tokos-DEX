@@ -6,6 +6,7 @@ This repository is `Imdavid21/Tokos-DEX`, but the old standalone DEX is decommis
 
 Read these first:
 - `docs/KNOWLEDGE_TRANSFER.md`
+- `docs/RAILWAY_CUTOVER_2026-09-12.md`
 - `docs/TOKOS_DATA_MASTER_SPEC.md`
 - `docs/BUILD_STATUS.md`
 - `README.md`
@@ -79,7 +80,7 @@ Always inspect latest `main` because multiple agents may be working concurrently
 
 ## Deployment boundary
 
-Tokos Data is moving to its own Railway project and should no longer consume V2 project resources after cutover.
+The Data cutover to the dedicated Railway project is complete and externally smoke-tested.
 
 Dedicated project:
 - project: `tokos-data`
@@ -89,9 +90,13 @@ Dedicated project:
 - service ID: `a660dc80-e1f2-4c2a-b038-b169be9790b6`
 - generated domain: `https://tokos-data-production.up.railway.app`
 
-The Dockerfile defaults to `${SERVICE:-api}`. For the web service, keep `SERVICE=web` or an explicit web start command.
+`tokos-web` now points `TOKOS_DATA_ORIGIN` at the new Railway origin. A one-shot external CI smoke test verified both the direct service and `https://tokos.fun/data`, including the representative history label and Rate Movers.
 
-Do not remove the old `tokos-dex` service from the V2 Railway project until the new service is healthy, `TOKOS_DATA_ORIGIN` is switched, and `tokos.fun/data` is smoke-tested.
+The old `tokos-dex` service (`e21b53cd-e9a3-4955-af98-80da63cb75b7`) still exists in the V2 Railway project but is no longer the public `/data` origin. It should be deleted so the old project is V2-only. The Railway AI-agent deletion action hit its usage limit, so that deletion remains the only cutover cleanup step.
+
+Do not touch `tokos-web`, `tokos-preview`, V2 `Postgres`, or the V2 Postgres volume while doing that cleanup.
+
+The Dockerfile defaults to `${SERVICE:-api}`. For the web service, keep `SERVICE=web` or an explicit web start command.
 
 ## Current roadmap
 
@@ -103,7 +108,7 @@ Approximate finished-spec status:
 - P4 data product: 35-40%
 
 Default continuation order unless the user says otherwise:
-1. finish Railway cutover;
+1. delete the old unused `tokos-dex` Railway service from the V2 project;
 2. P2 Assets -> Protocols -> Chains -> Compare;
 3. P3 treemaps/correlations/diagrams/advanced heatmaps;
 4. P4 Datasets/Metrics Directory/export/shareable-state polish;
@@ -112,14 +117,14 @@ Default continuation order unless the user says otherwise:
 ## Before every change
 
 1. Fetch latest `main` and recent commits.
-2. Read `docs/KNOWLEDGE_TRANSFER.md`, master spec, and build status.
+2. Read `docs/KNOWLEDGE_TRANSFER.md`, cutover status, master spec, and build status.
 3. Verify whether another agent is touching the same area.
 4. Make the smallest coherent change.
 5. Preserve real-data/no-fabrication guarantees.
 6. Run relevant tests/build/CI.
 7. Check the Railway deployment for the exact commit.
 8. Smoke-test `tokos.fun/data` and affected child routes.
-9. Do not modify the main V2 repo as a side effect unless the task is explicitly the `/data` proxy cutover.
+9. Do not modify the main V2 repo as a side effect unless the task is explicitly the `/data` proxy/routing layer.
 
 ## Runtime expectations
 
