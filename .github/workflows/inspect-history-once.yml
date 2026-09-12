@@ -1,0 +1,30 @@
+name: inspect-history-once
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-history-once.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect historical endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL 'https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=0' -o /tmp/a.json
+          total=$(jq -r '.total' /tmp/a.json)
+          for skip in $(seq 0 100 $((total-1))); do
+            curl -fsSL "https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=$skip" -o "/tmp/p$skip.json"
+          done
+          jq -s '[.[].results[] | select((.expiry|fromdateiso8601) > now) | {chainId,address,name,liq:(.details.liquidity//0)}] | sort_by(.liq) | reverse | .[0]' /tmp/p*.json > /tmp/m.json
+          cat /tmp/m.json
+          chain=$(jq -r '.chainId' /tmp/m.json); addr=$(jq -r '.address' /tmp/m.json)
+          start=$(date -u -d '30 days ago' +%s); end=$(date -u +%s)
+          url="https://api-v2.pendle.finance/core/v3/$chain/markets/$addr/historical-data?time_frame=day&timestamp_start=$start&timestamp_end=$end&fields=timestamp,impliedApy,tvl,liquidity,underlyingApy"
+          echo "$url"
+          curl -fsSL "$url" -o /tmp/h.json
+          jq 'keys' /tmp/h.json
+          jq 'if type=="array" then .[0:3] else . end' /tmp/h.json
