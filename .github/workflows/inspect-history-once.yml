@@ -16,10 +16,19 @@ jobs:
           set -euo pipefail
           curl -fsSL 'https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=0' -o /tmp/a.json
           total=$(jq -r '.total' /tmp/a.json)
-          for skip in $(seq 0 100 $((total-1))); do
-            curl -fsSL "https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=$skip" -o "/tmp/p$skip.json"
-          done
-          jq -s '[.[].results[] | select((.expiry|fromdateiso8601) > now) | {chainId,address,name,liq:(.details.liquidity//0)}] | sort_by(.liq) | reverse | .[0]' /tmp/p*.json > /tmp/m.json
+          for skip in $(seq 0 100 $((total-1))); do curl -fsSL "https://api-v2.pendle.finance/core/v2/markets/all?limit=100&skip=$skip" -o "/tmp/p$skip.json"; done
+          python3 - <<'PY' >/tmp/m.json
+          import json,glob,datetime,time
+          rows=[]
+          for f in glob.glob('/tmp/p*.json'):
+              rows += json.load(open(f)).get('results',[])
+          now=time.time()
+          def ts(s): return datetime.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()
+          live=[r for r in rows if r.get('expiry') and ts(r['expiry'])>now]
+          live.sort(key=lambda r:(r.get('details') or {}).get('liquidity') or 0, reverse=True)
+          r=live[0]
+          print(json.dumps({'chainId':r['chainId'],'address':r['address'],'name':r.get('name'),'liq':(r.get('details') or {}).get('liquidity')}))
+          PY
           cat /tmp/m.json
           chain=$(jq -r '.chainId' /tmp/m.json); addr=$(jq -r '.address' /tmp/m.json)
           start=$(date -u -d '30 days ago' +%s); end=$(date -u +%s)
