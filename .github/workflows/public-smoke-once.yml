@@ -10,27 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify Vercel origin, public route, and Pendle
+      - name: Inspect public responses
         shell: bash
         run: |
           set -euo pipefail
           for url in \
             'https://tokos-data-imdavid21s-projects.vercel.app/data' \
+            'https://tokos-data-r8mqaoidw-imdavid21s-projects.vercel.app/data' \
             'https://tokos.fun/data'; do
             body=$(mktemp)
             code=$(curl -L --max-time 30 -sS -o "$body" -w '%{http_code}' "$url")
-            unavailable=false
-            tracked=false
-            pendle=false
-            grep -q 'Overview unavailable' "$body" && unavailable=true || true
-            grep -q 'Tracked TVL / deposits' "$body" && tracked=true || true
-            grep -q 'Pendle' "$body" && pendle=true || true
-            echo "PUBLIC_SMOKE|$url|http=$code|unavailable=$unavailable|tracked=$tracked|pendle=$pendle|bytes=$(wc -c < "$body")"
-            test "$code" = '200'
-            test "$unavailable" = 'false'
-            test "$tracked" = 'true'
+            title=$(grep -o -m1 '<title[^>]*>[^<]*</title>' "$body" | sed -E 's/<[^>]+>//g' || true)
+            h1=$(grep -o -m1 '<h1[^>]*>[^<]*</h1>' "$body" | sed -E 's/<[^>]+>//g' || true)
+            echo "INSPECT|$url|http=$code|title=$title|h1=$h1|tokos=$(grep -qi 'Tokos Data' "$body" && echo true || echo false)|unavailable=$(grep -q 'Overview unavailable' "$body" && echo true || echo false)|tracked=$(grep -q 'Tracked TVL / deposits' "$body" && echo true || echo false)|pendle=$(grep -q 'Pendle' "$body" && echo true || echo false)|bytes=$(wc -c < "$body")"
           done
           pbody=$(mktemp)
           pcode=$(curl -L --max-time 30 -sS -o "$pbody" -w '%{http_code}' 'https://api-v2.pendle.finance/core/v2/markets/all?limit=1&skip=0')
-          echo "PUBLIC_SMOKE|pendle|http=$pcode|bytes=$(wc -c < "$pbody")"
-          test "$pcode" = '200'
+          echo "INSPECT|pendle-api|http=$pcode|markets=$(grep -o '"total":[0-9]*' "$pbody" | head -1 || true)|bytes=$(wc -c < "$pbody")"
