@@ -10,22 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify Railway live fallback
+      - name: Verify tokos.fun/data
         shell: bash
         run: |
           set -euo pipefail
-          for url in \
-            'https://tokos-dex-production.up.railway.app/data' \
-            'https://dex.tokos.fun/data'; do
-            body=$(mktemp)
-            code=$(curl -L --max-time 30 -sS -o "$body" -w '%{http_code}' "$url")
-            title=$(grep -o -m1 '<title[^>]*>[^<]*</title>' "$body" | sed -E 's/<[^>]+>//g' || true)
-            unavailable=$(grep -q 'Overview unavailable' "$body" && echo true || echo false)
-            tracked=$(grep -q 'Tracked TVL / deposits' "$body" && echo true || echo false)
-            pendle=$(grep -q 'Pendle' "$body" && echo true || echo false)
-            echo "RAILWAY_SMOKE|$url|http=$code|title=$title|unavailable=$unavailable|tracked=$tracked|pendle=$pendle|bytes=$(wc -c < "$body")"
-            test "$code" = '200'
-            test "$unavailable" = 'false'
-            test "$tracked" = 'true'
-            test "$pendle" = 'true'
-          done
+          url='https://tokos.fun/data'
+          body=$(mktemp)
+          code=$(curl -L --max-time 30 -sS -o "$body" -w '%{http_code}' "$url")
+          title=$(grep -o -m1 '<title[^>]*>[^<]*</title>' "$body" | sed -E 's/<[^>]+>//g' || true)
+          unavailable=$(grep -q 'Overview unavailable' "$body" && echo true || echo false)
+          tracked=$(grep -q 'Tracked TVL / deposits' "$body" && echo true || echo false)
+          pendle=$(grep -q 'Pendle' "$body" && echo true || echo false)
+          echo "PUBLIC_FINAL|$url|http=$code|title=$title|unavailable=$unavailable|tracked=$tracked|pendle=$pendle|bytes=$(wc -c < "$body")"
+          test "$code" = '200'
+          test "$unavailable" = 'false'
+          test "$tracked" = 'true'
+          test "$pendle" = 'true'
