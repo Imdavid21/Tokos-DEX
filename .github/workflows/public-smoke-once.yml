@@ -1,0 +1,36 @@
+name: public-smoke-once
+on:
+  push:
+    paths:
+      - '.github/workflows/public-smoke-once.yml'
+permissions:
+  contents: read
+jobs:
+  verify-public:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify Vercel origin, public route, and Pendle
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            'https://tokos-data-imdavid21s-projects.vercel.app/data' \
+            'https://tokos.fun/data'; do
+            body=$(mktemp)
+            code=$(curl -L --max-time 30 -sS -o "$body" -w '%{http_code}' "$url")
+            unavailable=false
+            tracked=false
+            pendle=false
+            grep -q 'Overview unavailable' "$body" && unavailable=true || true
+            grep -q 'Tracked TVL / deposits' "$body" && tracked=true || true
+            grep -q 'Pendle' "$body" && pendle=true || true
+            echo "PUBLIC_SMOKE|$url|http=$code|unavailable=$unavailable|tracked=$tracked|pendle=$pendle|bytes=$(wc -c < "$body")"
+            test "$code" = '200'
+            test "$unavailable" = 'false'
+            test "$tracked" = 'true'
+          done
+          pbody=$(mktemp)
+          pcode=$(curl -L --max-time 30 -sS -o "$pbody" -w '%{http_code}' 'https://api-v2.pendle.finance/core/v2/markets/all?limit=1&skip=0')
+          echo "PUBLIC_SMOKE|pendle|http=$pcode|bytes=$(wc -c < "$pbody")"
+          test "$pcode" = '200'
