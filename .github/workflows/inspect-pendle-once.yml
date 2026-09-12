@@ -1,0 +1,27 @@
+name: inspect-pendle-once
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-pendle-once.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect live Pendle market payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL 'https://api-v2.pendle.finance/core/v2/markets/all?limit=3&skip=0' -o /tmp/p.json
+          echo 'TOP LEVEL'
+          jq 'keys' /tmp/p.json
+          echo 'TOTAL'
+          jq '.total // .totalCount // .data.total // null' /tmp/p.json
+          echo 'FIRST RESULT KEYS'
+          jq '(.results // .markets // .data.results // .data.markets)[0] | keys' /tmp/p.json
+          echo 'FIRST RESULT'
+          jq '(.results // .markets // .data.results // .data.markets)[0]' /tmp/p.json
+          echo 'SECOND RESULT'
+          jq '(.results // .markets // .data.results // .data.markets)[1]' /tmp/p.json
