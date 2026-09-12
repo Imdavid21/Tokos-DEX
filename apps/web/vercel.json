@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "env": {
+    "API_URL": "https://tokos-dex-production.up.railway.app",
+    "NEXT_PUBLIC_API_URL": "https://tokos-dex-production.up.railway.app",
+    "NEXT_PUBLIC_BASE_PATH": "/data",
+    "NEXT_PUBLIC_APP_URL": "https://tokos.fun/data"
+  }
+}
