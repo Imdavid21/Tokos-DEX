@@ -19,8 +19,9 @@ for(const viewport of viewports)for(const theme of["light","dark"] as const){
    await page.waitForLoadState("networkidle");
    const layout=await page.evaluate(()=>{
     const px=(v:string)=>Number.parseFloat(v)||0;
+    const visible=(node:Element|null)=>!!node&&getComputedStyle(node).display!=="none"&&node.getBoundingClientRect().width>0&&node.getBoundingClientRect().height>0;
     const overlaps=(nodes:Element[])=>nodes.some((a,i)=>nodes.slice(i+1).some(b=>{const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();if(x.width===0||x.height===0||y.width===0||y.height===0)return false;return x.left<y.right&&x.right>y.left&&x.top<y.bottom&&x.bottom>y.top&&Math.min(x.right,y.right)-Math.max(x.left,y.left)>2&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>2}));
-    const bodyStyle=getComputedStyle(document.body),title=document.querySelector(".page-title"),table=document.querySelector("table.data"),nav=document.querySelector(".nav-link"),controls=[...document.querySelectorAll("button,.btn,.input,.select")];
+    const bodyStyle=getComputedStyle(document.body),title=document.querySelector(".page-title"),table=document.querySelector("table.data"),nav=document.querySelector(".nav-link"),controls=[...document.querySelectorAll("button,.btn,.input,.select")].filter(visible);
     const gridPanels=[...document.querySelectorAll(".analytics-grid > .panel")];
     return{
       scrollWidth:document.documentElement.scrollWidth,
@@ -29,8 +30,8 @@ for(const viewport of viewports)for(const theme of["light","dark"] as const){
       bodyFont:px(bodyStyle.fontSize),
       titleFont:title?px(getComputedStyle(title).fontSize):null,
       tableFont:table?px(getComputedStyle(table).fontSize):null,
-      navHeight:nav?nav.getBoundingClientRect().height:null,
-      minControlHeight:controls.length?Math.min(...controls.map(x=>x.getBoundingClientRect().height).filter(Boolean)):null,
+      navHeight:visible(nav)?nav!.getBoundingClientRect().height:null,
+      minControlHeight:controls.length?Math.min(...controls.map(x=>x.getBoundingClientRect().height)):null,
       panelOverlap:overlaps(gridPanels)
     }
    });
