@@ -31,9 +31,9 @@ jobs:
           PY
           cat /tmp/m.json
           chain=$(jq -r '.chainId' /tmp/m.json); addr=$(jq -r '.address' /tmp/m.json)
-          start=$(date -u -d '30 days ago' +%s); end=$(date -u +%s)
-          url="https://api-v2.pendle.finance/core/v3/$chain/markets/$addr/historical-data?time_frame=day&timestamp_start=$start&timestamp_end=$end&fields=timestamp,impliedApy,tvl,liquidity,underlyingApy"
+          start=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ); end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          url="https://api-v2.pendle.finance/core/v3/$chain/markets/$addr/historical-data?time_frame=day&timestamp_start=$start&timestamp_end=$end"
           echo "$url"
           curl -fsSL "$url" -o /tmp/h.json
           jq 'keys' /tmp/h.json
-          jq 'if type=="array" then .[0:3] else . end' /tmp/h.json
+          jq '.results[0:3] // .[0:3] // .' /tmp/h.json
