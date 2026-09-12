@@ -10,18 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect live Pendle market payload
+      - name: Verify rendered live Pendle metrics
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL 'https://api-v2.pendle.finance/core/v2/markets/all?limit=3&skip=0' -o /tmp/p.json
-          echo 'TOP LEVEL'
-          jq 'keys' /tmp/p.json
-          echo 'TOTAL'
-          jq '.total // .totalCount // .data.total // null' /tmp/p.json
-          echo 'FIRST RESULT KEYS'
-          jq '(.results // .markets // .data.results // .data.markets)[0] | keys' /tmp/p.json
-          echo 'FIRST RESULT'
-          jq '(.results // .markets // .data.results // .data.markets)[0]' /tmp/p.json
-          echo 'SECOND RESULT'
-          jq '(.results // .markets // .data.results // .data.markets)[1]' /tmp/p.json
+          curl -fsSL 'https://tokos.fun/data' -o /tmp/page.html
+          python3 - <<'PY'
+          import re, html
+          s=open('/tmp/page.html', encoding='utf-8').read()
+          pairs=re.findall(r'<div class="metric-label">(.*?)</div><div class="metric-value">(.*?)</div>', s)
+          clean=lambda x: html.unescape(re.sub(r'<[^>]+>','',x))
+          for k,v in pairs:
+              print('METRIC|%s|%s'%(clean(k),clean(v)))
+          for needle in ['UNKNOWN','Heatmap unavailable','No maturity landscape available','Overview unavailable']:
+              print('CHECK|%s|%s'%(needle, needle in s))
+          assert pairs, 'no metric pairs found'
+          vals={clean(k):clean(v) for k,v in pairs}
+          assert vals.get('Tracked TVL / deposits') not in (None,'—','$0'), vals
+          assert vals.get('Available liquidity') not in (None,'—','$0'), vals
+          assert vals.get('Median yield') not in (None,'—'), vals
+          assert int(vals.get('Active markets','0').replace(',','')) > 8, vals
+          assert int(vals.get('Assets','0').replace(',','')) > 1, vals
+          assert 'UNKNOWN' not in s
+          assert 'Heatmap unavailable' not in s
+          assert 'No maturity landscape available' not in s
+          PY
