@@ -13,6 +13,7 @@ function formatter(kind:NumberFormat){return(v:number)=>{
   return v.toLocaleString(undefined,{maximumFractionDigits:2});
 }}
 function css(name:string){return getComputedStyle(document.documentElement).getPropertyValue(name).trim()}
+function palette(){return[css("--chart-1"),css("--chart-2"),css("--chart-3"),css("--chart-4"),css("--chart-5"),css("--chart-6"),css("--chart-7")]}
 function downloadCsv(filename:string,series:Series[]){
   const timestamps=[...new Set(series.flatMap(s=>s.data.map(([x])=>String(x))))];
   const rows=[["timestamp",...series.map(s=>s.name)].join(",")];
@@ -35,14 +36,14 @@ export function TimeChart({series,yFormat="percent",height=300}:{series:Series[]
   useEffect(()=>{
     if(!ref.current)return;const chart=echarts.init(ref.current,null,{renderer:"canvas"});const format=formatter(yFormat);
     const render=()=>chart.setOption({
-      animationDuration:220,color:[css("--green"),css("--green-2"),css("--info"),css("--warning")],
+      animationDuration:220,color:palette(),
       grid:{left:56,right:18,top:28,bottom:42},
       tooltip:{trigger:"axis",axisPointer:{type:"cross",label:{backgroundColor:css("--text")}},valueFormatter:format,confine:true},
       legend:{top:0,right:0,textStyle:{color:css("--muted"),fontSize:10}},
       xAxis:{type:"time",axisLabel:{color:css("--muted"),fontSize:10},axisLine:{lineStyle:{color:css("--border")}},axisPointer:{show:true},splitLine:{show:false}},
       yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:10,formatter:format},splitLine:{lineStyle:{color:css("--border")}},axisLine:{show:false},axisPointer:{show:true}},
       dataZoom:[{type:"inside",filterMode:"none"},{type:"slider",height:12,bottom:7,borderColor:css("--border"),backgroundColor:"transparent",fillerColor:css("--highlight"),textStyle:{color:css("--muted"),fontSize:9}}],
-      series:series.map(s=>({name:s.name,type:"line",showSymbol:false,symbolSize:5,smooth:false,lineStyle:{width:1.6},emphasis:{focus:"series"},connectNulls:false,data:s.data}))
+      series:series.map((s,i)=>({name:s.name,type:"line",showSymbol:false,symbolSize:5,smooth:false,lineStyle:{width:1.8,color:palette()[i%palette().length]},areaStyle:series.length===1?{opacity:.08,color:palette()[i%palette().length]}:undefined,emphasis:{focus:"series"},connectNulls:false,data:s.data}))
     },true);
     render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
   },[series,yFormat]);
@@ -57,7 +58,7 @@ export function CurveChart({points}:{points:Array<{tenorDays:number;fixed:number
   ],[points]);
   useEffect(()=>{
     if(!ref.current)return;const chart=echarts.init(ref.current);const format=formatter("percent");const render=()=>chart.setOption({
-      animationDuration:220,color:[css("--green"),css("--info")],tooltip:{trigger:"axis",axisPointer:{type:"cross"},valueFormatter:format,confine:true},legend:{top:0,right:0,textStyle:{color:css("--muted"),fontSize:10}},grid:{left:56,right:18,top:30,bottom:38},
+      animationDuration:220,color:[css("--chart-1"),css("--chart-2")],tooltip:{trigger:"axis",axisPointer:{type:"cross"},valueFormatter:format,confine:true},legend:{top:0,right:0,textStyle:{color:css("--muted"),fontSize:10}},grid:{left:56,right:18,top:30,bottom:38},
       xAxis:{type:"value",name:"days",nameTextStyle:{color:css("--muted"),fontSize:10},axisLabel:{color:css("--muted"),fontSize:10},axisLine:{lineStyle:{color:css("--border")}},splitLine:{show:false}},
       yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:10,formatter:format},splitLine:{lineStyle:{color:css("--border")}}},
       dataZoom:[{type:"inside",filterMode:"none"}],series:[{name:"Fixed",type:"line",showSymbol:true,symbolSize:5,data:series[0]?.data??[]},{name:"Floating",type:"line",showSymbol:false,data:series[1]?.data??[]}]
@@ -70,7 +71,7 @@ export function Sparkline({data,format="percent",label="Trend"}:{data:Point[];fo
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     if(!ref.current||!data.length)return;const chart=echarts.init(ref.current,null,{renderer:"canvas"}),fmt=formatter(format);const values=data.map(([,v])=>v).filter((v):v is number=>v!=null);const high=values.length?Math.max(...values):null,low=values.length?Math.min(...values):null,first=values[0]??null;
-    const render=()=>chart.setOption({animation:false,grid:{left:0,right:0,top:2,bottom:2},tooltip:{trigger:"axis",confine:true,formatter:(raw:unknown)=>{const items=raw as Array<{value:Point}>;const current=items[0]?.value?.[1]??null;const change=current!=null&&first!=null?current-first:null;return [`Current ${current==null?"—":fmt(current)}`,`High ${high==null?"—":fmt(high)}`,`Low ${low==null?"—":fmt(low)}`,`Change ${change==null?"—":fmt(change)}`].join("<br/>")}},xAxis:{type:"category",show:false,data:data.map(([x])=>x)},yAxis:{type:"value",show:false,scale:true},series:[{type:"line",showSymbol:false,smooth:false,lineStyle:{width:1.2,color:css("--green")},areaStyle:{opacity:.06,color:css("--green")},data:data.map(([,v])=>v)}]},true);
+    const render=()=>chart.setOption({animation:false,grid:{left:0,right:0,top:2,bottom:2},tooltip:{trigger:"axis",confine:true,formatter:(raw:unknown)=>{const items=raw as Array<{value:Point}>;const current=items[0]?.value?.[1]??null;const change=current!=null&&first!=null?current-first:null;return [`Current ${current==null?"—":fmt(current)}`,`High ${high==null?"—":fmt(high)}`,`Low ${low==null?"—":fmt(low)}`,`Change ${change==null?"—":fmt(change)}`].join("<br/>")}},xAxis:{type:"category",show:false,data:data.map(([x])=>x)},yAxis:{type:"value",show:false,scale:true},series:[{type:"line",showSymbol:false,smooth:false,lineStyle:{width:1.2,color:css("--chart-1")},areaStyle:{opacity:.08,color:css("--chart-1")},data:data.map(([,v])=>v)}]},true);
     render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
   },[data,format]);return <div ref={ref} className="sparkline" role="img" aria-label={label}/>;
 }
