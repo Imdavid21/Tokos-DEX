@@ -10,7 +10,6 @@ Read these first:
 - `docs/TOKOS_DATA_MASTER_SPEC.md`
 - `docs/BUILD_STATUS.md`
 - `README.md`
-- `docs/DEX_ARCHIVE.md`
 
 Canonical cross-project handoff:
 - `Imdavid21/tokos/docs/FULL_KNOWLEDGE_TRANSFER_2026-09-12.md`
@@ -78,6 +77,10 @@ Recent 2026-09-12 work includes:
 
 Always inspect latest `main` because multiple agents may be working concurrently.
 
+## Legacy DEX cleanup
+
+The standalone DEX runtime is not present in the current tree. Legacy runtime code exists only in git history. The old archive marker file has been removed. Do not reintroduce DEX runtime files, Uniswap UI code, or compatibility routes into this repository.
+
 ## Deployment boundary
 
 The Data cutover to the dedicated Railway project is complete and externally smoke-tested.
@@ -92,11 +95,24 @@ Dedicated project:
 
 `tokos-web` now points `TOKOS_DATA_ORIGIN` at the new Railway origin. A one-shot external CI smoke test verified both the direct service and `https://tokos.fun/data`, including the representative history label and Rate Movers.
 
-The old `tokos-dex` service (`e21b53cd-e9a3-4955-af98-80da63cb75b7`) still exists in the V2 Railway project but is no longer the public `/data` origin. It should be deleted so the old project is V2-only. The Railway AI-agent deletion action hit its usage limit, so that deletion remains the only cutover cleanup step.
+The old `tokos-dex` service (`e21b53cd-e9a3-4955-af98-80da63cb75b7`) still exists in the V2 Railway project but is no longer the public `/data` origin. It should be deleted so the old project is V2-only. The connected Railway API currently does not expose service deletion and the Railway AI agent is usage-limited, so that infrastructure cleanup is manual unless tool access changes.
 
 Do not touch `tokos-web`, `tokos-preview`, V2 `Postgres`, or the V2 Postgres volume while doing that cleanup.
 
 The Dockerfile defaults to `${SERVICE:-api}`. For the web service, keep `SERVICE=web` or an explicit web start command.
+
+## Full-stack Railway status
+
+The repository supports the full web + API + worker + PostgreSQL/Timescale + Redis architecture. The dedicated Railway project currently runs only the web service because this Railway account has hit its workspace resource-provision limit. Creating the first additional Postgres service currently fails with `Free plan resource provision limit exceeded`.
+
+Once one Railway resource is freed, provision in this order:
+1. PostgreSQL/Timescale with a persistent volume;
+2. API service from this repo with `SERVICE=api` and `DATABASE_URL`/`REDIS_URL`;
+3. worker service with `SERVICE=worker` and the same persistence references;
+4. Redis if BullMQ queueing is desired, otherwise use the worker's direct mode temporarily;
+5. run migrations, validate providers, then set web `API_URL` / `NEXT_PUBLIC_API_URL` to the new API.
+
+Do not move V2 persistence into this project.
 
 ## Current roadmap
 
@@ -108,11 +124,11 @@ Approximate finished-spec status:
 - P4 data product: 35-40%
 
 Default continuation order unless the user says otherwise:
-1. delete the old unused `tokos-dex` Railway service from the V2 project;
+1. free one Railway resource and complete the dedicated Data DB/API/worker stack;
 2. P2 Assets -> Protocols -> Chains -> Compare;
 3. P3 treemaps/correlations/diagrams/advanced heatmaps;
 4. P4 Datasets/Metrics Directory/export/shareable-state polish;
-5. restore the full DB/API/worker runtime so fallback data is resilience rather than the primary source.
+5. keep live provider fallback as resilience rather than the primary source.
 
 ## Before every change
 
