@@ -1,4 +1,4 @@
-import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaLatestBounded}from"./safe-latest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";import{ingestCrossProviderBasis}from"./cross-basis.js";import{refreshHistoricalRollups}from"./rollups.js";import{probeApiReadiness}from"./readiness-probe.js";
+import{loadServerEnv}from"@tokos-data/config";import{ingestOneDeltaComparables,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaLatestBounded}from"./safe-latest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";import{ingestCrossProviderBasis}from"./cross-basis.js";import{refreshHistoricalRollups}from"./rollups.js";import{ensurePendleHistory}from"./history-bootstrap.js";import{probeApiReadiness}from"./readiness-probe.js";
 const env=loadServerEnv();
 type Task={name:string;every:number;run:()=>Promise<unknown>;running:boolean};
 const tasks:Task[]=[
@@ -8,7 +8,7 @@ const tasks:Task[]=[
  {name:"onedelta-comparables",every:3600000,run:()=>ingestOneDeltaComparables(env),running:false},
  {name:"cross-basis",every:3600000,run:()=>ingestCrossProviderBasis(env),running:false},
  {name:"stale-monitor",every:60000,run:()=>markStale(env),running:false},
- {name:"pendle-history",every:86400000,run:()=>backfillPendleHistory(env),running:false},
+ {name:"pendle-history",every:86400000,run:()=>ensurePendleHistory(env),running:false},
  {name:"rollup-refresh",every:86400000,run:()=>refreshHistoricalRollups(env),running:false},
  {name:"pendle-depth",every:7200000,run:()=>ingestPendleDepth(env),running:false},
  {name:"storage-prune",every:86400000,run:()=>services(env).repo.pruneProviderObservations(),running:false}
