@@ -1,4 +1,4 @@
-import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestOneDeltaLatest,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";
+import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestOneDeltaLatest,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";import{ingestCrossProviderBasis}from"./cross-basis.js";
 const env=loadServerEnv();
 type Task={name:string;every:number;run:()=>Promise<unknown>;running:boolean};
 const tasks:Task[]=[
@@ -6,6 +6,7 @@ const tasks:Task[]=[
  {name:"pendle-markets",every:300000,run:()=>ingestPendleMarkets(env),running:false},
  {name:"onedelta-depth",every:3600000,run:()=>ingestOneDeltaDepthBounded(env,100000,60),running:false},
  {name:"onedelta-comparables",every:3600000,run:()=>ingestOneDeltaComparables(env),running:false},
+ {name:"cross-basis",every:3600000,run:()=>ingestCrossProviderBasis(env),running:false},
  {name:"stale-monitor",every:60000,run:()=>markStale(env),running:false},
  {name:"pendle-history",every:86400000,run:()=>backfillPendleHistory(env),running:false},
  {name:"pendle-depth",every:7200000,run:()=>ingestPendleDepth(env),running:false},
@@ -15,5 +16,5 @@ async function execute(task:Task){if(task.running)return;task.running=true;const
 async function logReadiness(stage:string){try{const{repo}=services(env),r=await repo.pool.query(`SELECT (SELECT count(*) FROM mv_latest_markets WHERE status='active') active_markets,(SELECT count(*) FROM mv_latest_markets WHERE provider='pendle' AND status='active' AND implied_apy IS NOT NULL) pendle_fixed_markets,(SELECT count(*) FROM market_snapshots) market_snapshots,(SELECT count(*) FROM rate_snapshots) rate_snapshots,(SELECT count(*) FROM execution_depth_snapshots) execution_depth_points,(SELECT count(*) FROM basis_snapshots) basis_points,(SELECT count(*) FROM assets) assets,(SELECT count(*) FROM protocols) protocols,(SELECT count(*) FROM chains) chains`),x=r.rows[0]??{};console.log(JSON.stringify({level:"info",event:"data-readiness",stage,...Object.fromEntries(Object.entries(x).map(([k,v])=>[k,Number(v)]))}))}catch(error){console.error(JSON.stringify({level:"error",event:"data-readiness-failed",stage,error:error instanceof Error?error.message:String(error)}))}}
 async function bootstrap(){for(const name of["pendle-markets","pendle-history","onedelta-comparables","stale-monitor","storage-prune"]){const task=tasks.find(x=>x.name===name);if(task)await execute(task)}}
 console.log(JSON.stringify({level:"info",event:"direct-scheduler-ready",tasks:tasks.map(t=>({name:t.name,every:t.every}))}));
-void bootstrap().then(async()=>{for(const task of tasks)setInterval(()=>void execute(task),task.every);await logReadiness("bootstrap");const latest=tasks.find(x=>x.name==="onedelta-latest");if(latest)await execute(latest);const depth=tasks.find(x=>x.name==="onedelta-depth");if(depth)await execute(depth);await logReadiness("lending-refresh")});
+void bootstrap().then(async()=>{for(const task of tasks)setInterval(()=>void execute(task),task.every);await logReadiness("bootstrap");const latest=tasks.find(x=>x.name==="onedelta-latest");if(latest)await execute(latest);const depth=tasks.find(x=>x.name==="onedelta-depth");if(depth)await execute(depth);const basis=tasks.find(x=>x.name==="cross-basis");if(basis)await execute(basis);await logReadiness("lending-refresh")});
 process.on("SIGTERM",()=>process.exit(0));process.on("SIGINT",()=>process.exit(0));
