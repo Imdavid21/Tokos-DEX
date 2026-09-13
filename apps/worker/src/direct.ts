@@ -1,10 +1,10 @@
-import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestOneDeltaDepth,ingestOneDeltaLatest,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";
+import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestOneDeltaLatest,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";
 const env=loadServerEnv();
 type Task={name:string;every:number;run:()=>Promise<unknown>;running:boolean};
 const tasks:Task[]=[
  {name:"onedelta-latest",every:900000,run:()=>ingestOneDeltaLatest(env),running:false},
  {name:"pendle-markets",every:300000,run:()=>ingestPendleMarkets(env),running:false},
- {name:"onedelta-depth",every:3600000,run:()=>ingestOneDeltaDepth(env,100000),running:false},
+ {name:"onedelta-depth",every:3600000,run:()=>ingestOneDeltaDepthBounded(env,100000,60),running:false},
  {name:"onedelta-comparables",every:3600000,run:()=>ingestOneDeltaComparables(env),running:false},
  {name:"stale-monitor",every:60000,run:()=>markStale(env),running:false},
  {name:"pendle-history",every:86400000,run:()=>backfillPendleHistory(env),running:false},
