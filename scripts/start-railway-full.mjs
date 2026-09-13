@@ -16,8 +16,11 @@ if(!process.env.DATABASE_URL){
   process.exit(1);
 }
 
+console.log("tokos-data full runtime: migrating database");
 await wait(run("pnpm",["db:migrate"]),"database migration");
+console.log("tokos-data full runtime: database migration complete");
 
+console.log("tokos-data full runtime: starting api, direct worker, and web");
 const children=[
   run("pnpm",["--filter","@tokos-data/api","start"]),
   run("pnpm",["--filter","@tokos-data/worker","start:direct"]),
