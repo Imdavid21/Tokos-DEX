@@ -22,7 +22,8 @@ Tokos Data is separate from Tokos V2.
 - Data repo: `Imdavid21/Tokos-DEX`
 - Public route: `https://tokos.fun/data`
 - Dedicated Railway project: `tokos-data` (`23ecd480-6fbb-403d-823e-9cb4c3599737`)
-- Data web service: `tokos-data` (`a660dc80-e1f2-4c2a-b038-b169be9790b6`)
+- Data application service: `tokos-data` (`a660dc80-e1f2-4c2a-b038-b169be9790b6`)
+- Data database service: `TimescaleDB` (`d2720500-2ed6-4502-b716-1c6d9f1e714e`)
 - `tokos-web` reverse-proxies `/data` and `/data/*` through `TOKOS_DATA_ORIGIN`.
 
 Do not import or modify V2 execution logic from this repository.
@@ -46,40 +47,46 @@ Core principles:
 
 Competitive references include Token Terminal, Dune, DeFiLlama, Portals Explorer, Flowscan-style products, and specialized yield/basis dashboards.
 
-## Architecture
+## Production architecture
 
 ```text
-providers
--> ingestion/workers
--> raw observations
--> normalized observations + deterministic financial math
--> PostgreSQL/Timescale
--> Fastify API/read models
--> Next.js web
+Pendle + 1delta
+-> direct ingestion scheduler
+-> raw + normalized PostgreSQL/Timescale observations
+-> Fastify API/read models on :4000
+-> Next.js web on :3000
+-> tokos.fun/data
 ```
 
-Redis/BullMQ are used where configured.
+The combined production runtime is started with `pnpm start:railway:full`. It runs migrations, Fastify, the direct ingestion scheduler, and Next.js in one application service. Redis/BullMQ remain available for future queue separation but are not required by the current low-resource production layout.
 
 Provider work includes Pendle and 1delta. 1delta belongs here for broader data aggregation; it is not currently part of Tokos V2 execution.
 
+The web retains an explicitly labelled live Pendle fallback only for resilience if the persisted API/database is unavailable.
+
 ## Current work to preserve
 
-Recent 2026-09-12 work includes:
+Recent work includes:
 - current Pendle payload normalization;
-- live markets rendering verification;
 - real Pendle history;
-- representative 8-market fallback history;
 - actual 24H/7D Rate Movers;
+- representative 8-market fallback history when persistence is unavailable;
 - hiding unavailable metrics rather than inventing values;
-- representative fallback labelling;
 - analytical multi-series chart colors;
-- categorical palette typing/validation.
+- categorical palette typing/validation;
+- global spacing/typography/readability normalization;
+- chart-axis and legend readability improvements;
+- outlier-safe Yield Landscape scaling;
+- automated desktop/tablet/mobile/light/dark visual QA;
+- dedicated Timescale persistence and full combined Railway runtime.
 
 Always inspect latest `main` because multiple agents may be working concurrently.
 
 ## Legacy DEX cleanup
 
-The standalone DEX runtime is not present in the current tree. Legacy runtime code exists only in git history. The old archive marker file has been removed. Do not reintroduce DEX runtime files, Uniswap UI code, or compatibility routes into this repository.
+The standalone DEX runtime is not present in the current tree. Legacy runtime code exists only in git history. The old archive marker file has been removed. The old `tokos-dex` Railway service in the V2 project has also been deleted after the dedicated Data cutover was validated.
+
+Do not reintroduce DEX runtime files, Uniswap UI code, or compatibility routes into this repository.
 
 ## Deployment boundary
 
@@ -89,30 +96,26 @@ Dedicated project:
 - project: `tokos-data`
 - project ID: `23ecd480-6fbb-403d-823e-9cb4c3599737`
 - production env: `9b545e9f-9ffa-45a0-a4f7-7beffdc153e9`
-- service: `tokos-data`
-- service ID: `a660dc80-e1f2-4c2a-b038-b169be9790b6`
-- generated domain: `https://tokos-data-production.up.railway.app`
+- application service: `tokos-data`
+- application service ID: `a660dc80-e1f2-4c2a-b038-b169be9790b6`
+- database service: `TimescaleDB`
+- database service ID: `d2720500-2ed6-4502-b716-1c6d9f1e714e`
+- generated application domain: `https://tokos-data-production.up.railway.app`
 
-`tokos-web` now points `TOKOS_DATA_ORIGIN` at the new Railway origin. A one-shot external CI smoke test verified both the direct service and `https://tokos.fun/data`, including the representative history label and Rate Movers.
+The Timescale database uses persistent storage on Railway private networking. The application `DATABASE_URL` explicitly disables SSL for that private database connection because the internal Timescale endpoint does not support SSL.
 
-The old `tokos-dex` service (`e21b53cd-e9a3-4955-af98-80da63cb75b7`) still exists in the V2 Railway project but is no longer the public `/data` origin. It should be deleted so the old project is V2-only. The connected Railway API currently does not expose service deletion and the Railway AI agent is usage-limited, so that infrastructure cleanup is manual unless tool access changes.
+The application deployment must continue to use the repository Dockerfile and `pnpm start:railway:full`. Do not revert it to the monorepo auto-import commands that build/start only `@tokos-data/web`.
 
-Do not touch `tokos-web`, `tokos-preview`, V2 `Postgres`, or the V2 Postgres volume while doing that cleanup.
+Validated 2026-09-13 production facts:
+- all five migrations applied;
+- Fastify listens on port 4000;
+- Next.js listens on port 3000;
+- direct scheduler starts and stale monitoring runs every minute;
+- Pendle bootstrap persisted 790 markets;
+- an external persisted-API smoke test returned a Fastify request ID, 807 active markets, 342 assets, 94 protocols, and non-empty 1delta market rows;
+- the live fallback is no longer the primary architecture.
 
-The Dockerfile defaults to `${SERVICE:-api}`. For the web service, keep `SERVICE=web` or an explicit web start command.
-
-## Full-stack Railway status
-
-The repository supports the full web + API + worker + PostgreSQL/Timescale + Redis architecture. The dedicated Railway project currently runs only the web service because this Railway account has hit its workspace resource-provision limit. Creating the first additional Postgres service currently fails with `Free plan resource provision limit exceeded`.
-
-Once one Railway resource is freed, provision in this order:
-1. PostgreSQL/Timescale with a persistent volume;
-2. API service from this repo with `SERVICE=api` and `DATABASE_URL`/`REDIS_URL`;
-3. worker service with `SERVICE=worker` and the same persistence references;
-4. Redis if BullMQ queueing is desired, otherwise use the worker's direct mode temporarily;
-5. run migrations, validate providers, then set web `API_URL` / `NEXT_PUBLIC_API_URL` to the new API.
-
-Do not move V2 persistence into this project.
+Do not touch `tokos-web`, `tokos-preview`, V2 `Postgres`, or the V2 Postgres volume unless the task explicitly requires changes in the main V2 project.
 
 ## Current roadmap
 
@@ -124,10 +127,10 @@ Approximate finished-spec status:
 - P4 data product: 35-40%
 
 Default continuation order unless the user says otherwise:
-1. free one Railway resource and complete the dedicated Data DB/API/worker stack;
-2. P2 Assets -> Protocols -> Chains -> Compare;
-3. P3 treemaps/correlations/diagrams/advanced heatmaps;
-4. P4 Datasets/Metrics Directory/export/shareable-state polish;
+1. P2 Assets -> Protocols -> Chains -> Compare;
+2. P3 treemaps/correlations/diagrams/advanced heatmaps;
+3. P4 Datasets/Metrics Directory/export/shareable-state polish;
+4. expand/tune provider coverage and historical depth;
 5. keep live provider fallback as resilience rather than the primary source.
 
 ## Before every change
@@ -138,8 +141,8 @@ Default continuation order unless the user says otherwise:
 4. Make the smallest coherent change.
 5. Preserve real-data/no-fabrication guarantees.
 6. Run relevant tests/build/CI.
-7. Check the Railway deployment for the exact commit.
-8. Smoke-test `tokos.fun/data` and affected child routes.
+7. Check the Railway deployment for the exact commit when runtime code changes.
+8. Smoke-test `tokos.fun/data` and affected child routes when deployment-facing behavior changes.
 9. Do not modify the main V2 repo as a side effect unless the task is explicitly the `/data` proxy/routing layer.
 
 ## Runtime expectations
@@ -152,6 +155,12 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+```
+
+Production combined runtime:
+
+```bash
+pnpm start:railway:full
 ```
 
 ## Safety rules
