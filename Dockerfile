@@ -17,4 +17,4 @@ RUN corepack enable && corepack prepare pnpm@12.3.4 --activate
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app /app
-CMD ["sh", "-c", "pnpm --filter @tokos-data/${SERVICE:-api} start"]
+CMD ["pnpm", "start:railway:full"]
