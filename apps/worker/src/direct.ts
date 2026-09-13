@@ -13,7 +13,7 @@ const tasks:Task[]=[
 ];
 async function execute(task:Task){if(task.running)return;task.running=true;const started=Date.now();try{const result=await task.run();console.log(JSON.stringify({level:"info",job:task.name,event:"completed",durationMs:Date.now()-started,result}))}catch(error){console.error(JSON.stringify({level:"error",job:task.name,event:"failed",durationMs:Date.now()-started,error:error instanceof Error?error.message:String(error)}))}finally{task.running=false}}
 for(const task of tasks){setInterval(()=>void execute(task),task.every).unref()}
-for(const name of["onedelta-latest","pendle-markets","stale-monitor","storage-prune"]){const task=tasks.find(x=>x.name===name);if(task)await execute(task)}
 console.log(JSON.stringify({level:"info",event:"direct-scheduler-ready",tasks:tasks.map(t=>({name:t.name,every:t.every}))}));
+for(const name of["pendle-markets","onedelta-latest","stale-monitor","storage-prune"]){const task=tasks.find(x=>x.name===name);if(task)await execute(task)}
 process.on("SIGTERM",()=>process.exit(0));process.on("SIGINT",()=>process.exit(0));
 await new Promise(()=>{});
