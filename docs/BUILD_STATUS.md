@@ -1,10 +1,10 @@
 # Tokos Data build status
 
-Updated: 2026-09-12
+Updated: 2026-09-13
 
 ## Current summary
 
-Tokos Data is live as a standalone product at `https://tokos.fun/data` and is being moved from the shared V2 Railway project into its own `tokos-data` Railway project.
+Tokos Data is live at `https://tokos.fun/data` and now runs entirely inside its dedicated Railway project. Tokos V2 remains operationally isolated in `Imdavid21/tokos`.
 
 Approximate finished-spec status:
 - P0 visual foundation: 95-100%
@@ -13,7 +13,68 @@ Approximate finished-spec status:
 - P3 advanced visual analytics: 45-50%
 - P4 data-product surfaces: 35-40%
 
-Overall finished-product quality is roughly low-60s percent even though a larger share of route/checklist scaffolding exists.
+Overall finished-product quality is still roughly low-60s percent because P2-P4 remain materially shallower than the master spec, even though the production platform foundation is now complete.
+
+## Production architecture
+
+```text
+Pendle + 1delta
+-> direct ingestion scheduler
+-> PostgreSQL/Timescale normalized observations
+-> Fastify API/read models on :4000
+-> Next.js research UI on :3000
+-> tokos.fun/data reverse proxy
+```
+
+The live Pendle fallback remains only as a resilience path when the persisted API/database is unavailable.
+
+## Dedicated Railway deployment
+
+Project:
+- project: `tokos-data`
+- project ID: `23ecd480-6fbb-403d-823e-9cb4c3599737`
+- production environment: `9b545e9f-9ffa-45a0-a4f7-7beffdc153e9`
+
+Application service:
+- service: `tokos-data`
+- service ID: `a660dc80-e1f2-4c2a-b038-b169be9790b6`
+- generated domain: `https://tokos-data-production.up.railway.app`
+- runs web + Fastify API + direct ingestion worker in one container through `pnpm start:railway:full`
+
+Database service:
+- service: `TimescaleDB`
+- service ID: `d2720500-2ed6-4502-b716-1c6d9f1e714e`
+- image: `timescale/timescaledb-ha:pg18.6-ts2.30.0-all`
+- database: `tokos_data`
+- persistent volume mounted at `/home/postgres/pgdata`
+- private networking only
+
+The application connects to TimescaleDB over Railway private networking with SSL disabled for the private connection.
+
+## Full-stack cutover verification
+
+Verified on 2026-09-13:
+- Docker image builds all workspace packages and apps;
+- all five DB migrations apply successfully;
+- Fastify listens on port 4000;
+- Next.js listens on port 3000;
+- the direct scheduler starts successfully;
+- Pendle bootstrap completed with 790 markets in about 8 seconds;
+- stale monitoring is executing every minute;
+- a public one-shot smoke test reached the persisted Fastify API through the deployed Next.js rewrite;
+- that smoke test returned a real Fastify request ID, 807 active markets, 342 assets, 94 protocols, and non-empty persisted market rows;
+- persisted market rows included 1delta data while broader 1delta bootstrap was still progressing;
+- no V2 runtime, V2 database, or V2 preview service was modified.
+
+Current resource use remains within the existing service envelope. During cutover, the combined application used roughly 0.50 GB memory at peak/current sampling and the TimescaleDB service used roughly 0.21 GB memory with about 0.16 GB disk consumed.
+
+## Legacy DEX cleanup
+
+- The standalone DEX runtime is absent from the current repository tree.
+- Legacy DEX code remains only in git history.
+- The obsolete archive marker file was removed.
+- The old Railway `tokos-dex` service in the V2 project was deleted after the dedicated Data deployment was healthy.
+- Do not reintroduce historical DEX runtime, Uniswap UI code, or compatibility routes.
 
 ## Implemented platform foundation
 
@@ -22,14 +83,14 @@ Overall finished-product quality is roughly low-60s percent even though a larger
 - raw provider observations and provider health;
 - 1delta discovery/latest/depth/comparables adapters;
 - Pendle catalogue/history/v3 adapters;
-- normalization and deterministic financial math;
-- BullMQ workers/job scheduling;
-- Fastify API;
+- deterministic normalization and financial math;
+- Fastify API and read models;
+- direct production scheduler, with BullMQ support still available where configured;
 - Next.js research UI;
 - URL state, search, stale states, charts, and CSV export;
 - dataset registry including canonical rate snapshots;
 - unit/provider/API smoke tests;
-- Playwright smoke coverage;
+- Playwright browser coverage;
 - GitHub CI;
 - Docker/Docker Compose infrastructure.
 
@@ -38,7 +99,7 @@ Overall finished-product quality is roughly low-60s percent even though a larger
 Largely complete:
 - compact analytical shell/navigation;
 - 8px spacing/grid system;
-- consistent typography/tabular numerals;
+- consistent typography and tabular numerals;
 - light/dark themes;
 - metric strips;
 - reusable ECharts system;
@@ -46,8 +107,12 @@ Largely complete:
 - dense sticky tables;
 - compact filters;
 - loading/error/stale states;
-- crosshair, zoom, fullscreen, CSV interactions;
-- hover/readability polish.
+- crosshair, zoom, fullscreen, and CSV interactions;
+- chart-axis and legend readability improvements;
+- outlier-safe Yield Landscape scaling;
+- responsive overflow fixes.
+
+A 2026-09-13 visual QA pass covered Overview, Markets, Rates, Yield Curve, Basis, Execution, Correlations, Assets, Protocols, Chains, Compare, Datasets, and Metrics at 1440, 1280, 1024, 430, and 390 px in both light and dark themes. The matrix passed after fixing the mobile overview overflow and hidden-mobile-rail test issue.
 
 ## P1 core product
 
@@ -60,11 +125,11 @@ Largely complete:
 - Basis;
 - Liquidity/Execution analytics.
 
-Recent P1 correctness work includes real Pendle history and real Rate Movers when the normalized backend is unavailable.
+The Overview now labels the raw extreme metric as `Max observed yield`, and Yield Landscape switches to log-y only when genuine source yields span an extreme range instead of hiding or clipping real observations.
 
-## Live fallback currently in production
+## Live fallback
 
-The server-side fallback can:
+The server-side Pendle fallback can still:
 - fetch active Pendle markets;
 - use current implied APY, underlying/base APY, TVL, liquidity, maturity, chain, and market metadata;
 - fetch real Pendle v3 daily history;
@@ -74,27 +139,11 @@ The server-side fallback can:
 - compute actual 24H/7D rate movement in basis points;
 - provide real sparklines for sampled markets.
 
-This is a resilience layer, not the final full-universe historical architecture.
+It is now a resilience layer rather than the primary public data architecture.
 
-## Analytical color system
+## P2 entity intelligence: biggest product gap
 
-The UI no longer uses green for every chart.
-
-Light-mode analytical palette:
-- Tokos green `#3F7D3A`
-- primary blue `#4568F2`
-- coral `#F16D5B`
-- violet `#8267D9`
-- teal `#2AA889`
-- amber `#D99A32`
-- rose `#D85E8E`
-- cyan `#4AA8C7`
-
-Dark mode uses higher-luminance equivalents. Heatmaps use blue-low -> teal-mid -> amber-high.
-
-## P2 entity intelligence: biggest current gap
-
-Assets, Protocols, Chains, and Compare exist, but several surfaces are still much shallower than the master spec.
+Assets, Protocols, Chains, and Compare exist, but several surfaces remain shallower than the master spec.
 
 Next required work:
 - Asset: yield history/curve, fixed-vs-floating, protocol/chain breakdown, distribution, yield landscape, richer markets table;
@@ -122,53 +171,24 @@ Still incomplete/missing:
 Still incomplete:
 - richer Dataset details;
 - consistent source/frequency/latest observation/methodology visibility;
-- Metrics Directory;
+- Metrics Directory depth;
 - richer CSV/export flows;
 - broader shareable analytical URL state.
 
-## Repository decision
+## Repository boundary
 
-- Tokos Data is hosted in `Imdavid21/Tokos-DEX`.
-- The old standalone DEX is decommissioned and remains only in git history/archive documentation.
-- No historical DEX runtime should be revived unless explicitly requested.
-- Tokos V2 remains in `Imdavid21/tokos` and is operationally isolated.
-
-## Railway deployment split
-
-Dedicated project created on 2026-09-12:
-- project: `tokos-data`
-- project ID: `23ecd480-6fbb-403d-823e-9cb4c3599737`
-- production environment ID: `9b545e9f-9ffa-45a0-a4f7-7beffdc153e9`
-- web service: `tokos-data`
-- service ID: `a660dc80-e1f2-4c2a-b038-b169be9790b6`
-- generated domain: `https://tokos-data-production.up.railway.app`
-
-The web service must run with `SERVICE=web` when using the repository Dockerfile because the Dockerfile default is `${SERVICE:-api}`.
-
-Public `tokos.fun/data` remains reverse-proxied by the main `tokos-web` service through `TOKOS_DATA_ORIGIN`.
-
-The old `tokos-dex` service in the V2 Railway project should be removed only after the new service is healthy and the public proxy cutover is verified.
-
-## Validation status
-
-Verified on 2026-09-12 for the history/color implementation:
-- lint passed;
-- typecheck passed;
-- tests passed;
-- production build passed;
-- public `/data` returned non-empty representative history;
-- public Rate Movers returned 8 real rows with positive and negative basis-point changes;
-- representative fallback was visibly labelled.
-
-Always re-check current CI and Railway deployment status before assuming this snapshot is still current.
+- Data repo: `Imdavid21/Tokos-DEX`
+- V2 repo: `Imdavid21/tokos`
+- Tokos Data must not import or modify V2 execution logic.
+- Public `/data` remains reverse-proxied by `tokos-web` through `TOKOS_DATA_ORIGIN`.
 
 ## Next execution order
 
 Unless the user sets a different priority:
-1. complete dedicated Railway cutover and proxy switch;
-2. finish P2 entity intelligence;
-3. finish P3 advanced visual analytics;
-4. finish P4 data-product surfaces;
-5. restore the full DB/API/worker pipeline so the live fallback is resilience rather than the primary public data source.
+1. finish P2 Assets -> Protocols -> Chains -> Compare;
+2. finish P3 treemaps/correlations/diagrams/advanced heatmaps;
+3. finish P4 Datasets/Metrics Directory/export/shareable-state polish;
+4. expand and tune provider coverage/history once the analytical product surfaces are complete;
+5. keep the live provider fallback as resilience only.
 
 See `docs/KNOWLEDGE_TRANSFER.md` and `docs/TOKOS_DATA_MASTER_SPEC.md` for the full context and acceptance criteria.
