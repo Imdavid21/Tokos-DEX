@@ -1,8 +1,8 @@
-import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestOneDeltaLatest,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";import{ingestCrossProviderBasis}from"./cross-basis.js";import{refreshHistoricalRollups}from"./rollups.js";import{probeApiReadiness}from"./readiness-probe.js";
+import{loadServerEnv}from"@tokos-data/config";import{backfillPendleHistory,ingestOneDeltaComparables,ingestPendleMarkets,ingestPendleDepth,markStale,services}from"./ingest.js";import{ingestOneDeltaLatestBounded}from"./safe-latest.js";import{ingestOneDeltaDepthBounded}from"./safe-depth.js";import{ingestCrossProviderBasis}from"./cross-basis.js";import{refreshHistoricalRollups}from"./rollups.js";import{probeApiReadiness}from"./readiness-probe.js";
 const env=loadServerEnv();
 type Task={name:string;every:number;run:()=>Promise<unknown>;running:boolean};
 const tasks:Task[]=[
- {name:"onedelta-latest",every:900000,run:()=>ingestOneDeltaLatest(env),running:false},
+ {name:"onedelta-latest",every:900000,run:()=>ingestOneDeltaLatestBounded(env,20),running:false},
  {name:"pendle-markets",every:300000,run:()=>ingestPendleMarkets(env),running:false},
  {name:"onedelta-depth",every:3600000,run:()=>ingestOneDeltaDepthBounded(env,100000,60),running:false},
  {name:"onedelta-comparables",every:3600000,run:()=>ingestOneDeltaComparables(env),running:false},
