@@ -14,6 +14,5 @@ const tasks:Task[]=[
 async function execute(task:Task){if(task.running)return;task.running=true;const started=Date.now();console.log(JSON.stringify({level:"info",job:task.name,event:"started"}));try{const result=await task.run();console.log(JSON.stringify({level:"info",job:task.name,event:"completed",durationMs:Date.now()-started,result}))}catch(error){console.error(JSON.stringify({level:"error",job:task.name,event:"failed",durationMs:Date.now()-started,error:error instanceof Error?error.message:String(error)}))}finally{task.running=false}}
 async function bootstrap(){for(const name of["pendle-markets","pendle-history","onedelta-comparables","stale-monitor","storage-prune"]){const task=tasks.find(x=>x.name===name);if(task)await execute(task)}}
 console.log(JSON.stringify({level:"info",event:"direct-scheduler-ready",tasks:tasks.map(t=>({name:t.name,every:t.every}))}));
-void bootstrap().finally(()=>{for(const task of tasks)setInterval(()=>void execute(task),task.every).unref()});
+void bootstrap().finally(()=>{for(const task of tasks)setInterval(()=>void execute(task),task.every);const latest=tasks.find(x=>x.name==="onedelta-latest");if(latest)void execute(latest)});
 process.on("SIGTERM",()=>process.exit(0));process.on("SIGINT",()=>process.exit(0));
-await new Promise(()=>{});
