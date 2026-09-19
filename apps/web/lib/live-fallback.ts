@@ -89,11 +89,18 @@ function entityDirectory(rows:PendleMarket[],kind:"asset"|"protocol"|"chain"){
  const result=[...groups.entries()].map(([id,ms])=>{const rates=ms.map(impliedApyOf).filter((x):x is number=>x!=null),assets=new Set(ms.map(symbolOf)),protocols=new Set(ms.map(protocolIdOf)),chains=new Set(ms.map(m=>String(m.chainId))),liquidity=ms.reduce((s,m)=>s+(liquidityOf(m)??0),0),tvl=ms.reduce((s,m)=>s+(tvlOf(m)??0),0);return{id,label:kind==="chain"?chainName(id):kind==="protocol"?protocolNameOf(ms[0]!):id,name:kind==="chain"?chainName(id):kind==="protocol"?protocolNameOf(ms[0]!):id,markets:ms.length,assets:assets.size,protocols:protocols.size,chains:chains.size,medianRate:median(rates),bestRate:rates.length?Math.max(...rates):null,depositsUsd:tvl||null,debtUsd:null,liquidityUsd:liquidity||null,utilization:null}}).sort((a,b)=>(b.liquidityUsd??0)-(a.liquidityUsd??0));
  return{kind,rows:result};
 }
-function dependencyGraph(m:PendleMarket,asOf:string){const id=idOf(m),s=symbolOf(m),pid=protocolIdOf(m),cid=String(m.chainId);return{root:{type:"market",id},edges:[
- {source_type:"market",source_id:id,relationship:"uses_asset",target_type:"asset",target_id:s,exposure_usd:tvlOf(m),weight:null,observed_at:asOf},
- {source_type:"market",source_id:id,relationship:"operated_by",target_type:"protocol",target_id:pid,exposure_usd:tvlOf(m),weight:null,observed_at:asOf},
- {source_type:"market",source_id:id,relationship:"deployed_on",target_type:"chain",target_id:cid,exposure_usd:tvlOf(m),weight:null,observed_at:asOf}
- ]}}
+function tokenMeta(t:Token|undefined){if(typeof t!=="object"||t===null)return null;const symbol=t.symbol?.trim()||t.name?.trim()||null;if(!symbol)return null;return{symbol,name:t.name?.trim()||null,address:t.address?.toLowerCase()||null}}
+function dependencyGraph(m:PendleMarket,asOf:string){
+ const id=idOf(m),cid=String(m.chainId),pt=tokenMeta(m.pt),yt=tokenMeta(m.yt),sy=tokenMeta(m.sy),underlying=tokenMeta(m.underlyingAsset),edges:Array<Record<string,unknown>>=[];
+ const add=(relationship:string,targetType:string,targetId:string,targetLabel:string,detail:string|null=null)=>edges.push({source_type:"market",source_id:id,relationship,target_type:targetType,target_id:targetId,target_label:targetLabel,detail,exposure_usd:null,weight:null,observed_at:asOf});
+ if(pt)add("principal_token","principal token",pt.address??pt.symbol,pt.symbol,pt.name);
+ if(yt)add("yield_token","yield token",yt.address??yt.symbol,yt.symbol,yt.name);
+ if(sy)add("standardized_yield_wrapper","SY / wrapper",sy.address??sy.symbol,sy.symbol,sy.name);
+ if(underlying)add("underlying_asset","underlying asset",underlying.address??underlying.symbol,underlying.symbol,underlying.name);
+ add("source_protocol","protocol",protocolIdOf(m),protocolNameOf(m),null);
+ add("network","network",cid,chainName(cid),null);
+ return{root:{type:"market",id},market:{name:nameOf(m),asset:symbolOf(m),protocol:protocolNameOf(m),network:chainName(cid),maturity:maturityOf(m),tvlUsd:tvlOf(m),liquidityUsd:liquidityOf(m)},edges};
+}
 async function compareLive(rows:PendleMarket[],path:string){
  const u=new URL(path,"https://tokos.local"),ids=(u.searchParams.get("marketIds")??"").split(",").filter(Boolean).slice(0,6),days=Number(u.searchParams.get("days")??90);
  const selected=rows.filter(m=>ids.includes(idOf(m))),series=await Promise.all(selected.map(async market=>({market,points:await fetchHistory(market,days)})));
