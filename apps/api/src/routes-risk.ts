@@ -6,6 +6,7 @@ import {envelope,finiteOrNull} from "./lib.js";
 
 const entityType=z.enum(["asset","market","protocol","chain","vault","curator","oracle","issuer","bridge","liquidity_venue"]);
 const riskEntityType=z.enum(["asset","market","protocol","chain","vault","curator"]);
+const asRecord=(value:unknown):Record<string,unknown>=>value!==null&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
 const ratingWeights:Record<string,number>={liquidity:.35,utilization:.25,rate_volatility:.20,price_impact:.20};
 const severityPoints:Record<string,number>={low:100,moderate:75,elevated:45,high:15,critical:0};
 function evidenceRating(observations:Array<{dimension:string;severity:string|null;stale?:boolean}>){
@@ -34,7 +35,7 @@ export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
       )
       SELECT lm.id,lm.market_name,lm.asset_symbol,lm.protocol_name,lm.chain_name,lm.liquidity_usd,
         COALESCE(lm.supply_apr,lm.fixed_apy,lm.implied_apy) rate,
-        jsonb_agg(jsonb_build_object('dimension',r.dimension,'metricKey',r.metric_key,'value',r.value,'unit',r.unit,'severity',r.severity,'confidence',r.confidence,'observedAt',r.observed_at))
+        jsonb_agg(jsonb_build_object('dimension',r.dimension,'metricKey',r.metric_key,'value',r.value,'unit',r.unit,'severity',r.severity,'confidence',r.confidence,'observedAt',r.observed_at,'stale',r.stale))
           FILTER(WHERE r.entity_id IS NOT NULL) observations,
         max(r.observed_at) risk_as_of,bool_or(COALESCE(r.stale,false)) risk_stale
       FROM mv_latest_markets lm LEFT JOIN latest r ON r.entity_id=lm.id
@@ -103,7 +104,7 @@ export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
 
 
   app.get("/v1/risk/entities/:type/:id/changes",async(request,reply)=>{
-    const parsed=z.object({type:riskEntityType,id:z.string().min(1),days:z.coerce.number().int().min(1).max(365).default(90)}).safeParse({...request.params,...request.query});
+    const parsed=z.object({type:riskEntityType,id:z.string().min(1),days:z.coerce.number().int().min(1).max(365).default(90)}).safeParse({...asRecord(request.params),...asRecord(request.query)});
     if(!parsed.success)return reply.code(400).send({error:{code:"INVALID_ENTITY",message:"Invalid risk history request",requestId:request.id}});
     const {type,id,days}=parsed.data;
     const rows=await db.query(`
@@ -119,7 +120,7 @@ export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
   });
 
   app.get("/v1/dependencies/:type/:id/graph",async(request,reply)=>{
-    const parsed=z.object({type:entityType,id:z.string().min(1),depth:z.coerce.number().int().min(1).max(3).default(2)}).safeParse({...request.params,...request.query});
+    const parsed=z.object({type:entityType,id:z.string().min(1),depth:z.coerce.number().int().min(1).max(3).default(2)}).safeParse({...asRecord(request.params),...asRecord(request.query)});
     if(!parsed.success)return reply.code(400).send({error:{code:"INVALID_ENTITY",message:"Invalid dependency graph request",requestId:request.id}});
     const {type,id,depth}=parsed.data;
     const rows=await db.query(`
@@ -137,7 +138,7 @@ export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
   });
 
   app.get("/v1/risk/markets/:id/scenario",async(request,reply)=>{
-    const parsed=z.object({id:z.string().min(1),rateShockBps:z.coerce.number().min(-5000).max(5000).default(-200),liquidityShockPct:z.coerce.number().min(-.99).max(10).default(-.5),utilizationShock:z.coerce.number().min(-1).max(1).default(.1),notionalUsd:z.coerce.number().positive().default(100000),horizonDays:z.coerce.number().int().min(1).max(3650).default(30)}).safeParse({...request.params,...request.query});
+    const parsed=z.object({id:z.string().min(1),rateShockBps:z.coerce.number().min(-5000).max(5000).default(-200),liquidityShockPct:z.coerce.number().min(-.99).max(10).default(-.5),utilizationShock:z.coerce.number().min(-1).max(1).default(.1),notionalUsd:z.coerce.number().positive().default(100000),horizonDays:z.coerce.number().int().min(1).max(3650).default(30)}).safeParse({...asRecord(request.params),...asRecord(request.query)});
     if(!parsed.success)return reply.code(400).send({error:{code:"INVALID_SCENARIO",message:"Invalid scenario inputs",requestId:request.id}});
     const q=parsed.data,row=await db.query(`SELECT id,market_name,COALESCE(fixed_apy,implied_apy,supply_apr) rate,liquidity_usd,utilization FROM mv_latest_markets WHERE id=$1`,[q.id]);
     if(!row.rowCount)return reply.code(404).send({error:{code:"NOT_FOUND",message:"Market not found",requestId:request.id}});
@@ -148,11 +149,11 @@ export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
   });
 
   app.get("/v1/risk/markets/:id/adjusted-yield",async(request,reply)=>{
-    const parsed=z.object({id:z.string().min(1),horizonDays:z.coerce.number().int().min(1).max(3650).default(30),notionalUsd:z.coerce.number().positive().default(100000)}).safeParse({...request.params,...request.query});
+    const parsed=z.object({id:z.string().min(1),horizonDays:z.coerce.number().int().min(1).max(3650).default(30),notionalUsd:z.coerce.number().positive().default(100000)}).safeParse({...asRecord(request.params),...asRecord(request.query)});
     if(!parsed.success)return reply.code(400).send({error:{code:"INVALID_INPUT",message:"Invalid adjusted-yield inputs",requestId:request.id}});
     const q=parsed.data,row=await db.query(`SELECT id,market_name,COALESCE(fixed_apy,implied_apy,supply_apr) headline_rate FROM mv_latest_markets WHERE id=$1`,[q.id]);
     if(!row.rowCount)return reply.code(404).send({error:{code:"NOT_FOUND",message:"Market not found",requestId:request.id}});
-    const x=await db.query(`SELECT cost_pct,price_impact_bps,fee_usd,observed_at FROM execution_depth_snapshots WHERE market_id=$1 AND notional_usd<=$2 ORDER BY observed_at DESC,notional_usd DESC LIMIT 1`,[q.id,q.notionalUsd]);
+    const x=await db.query(`SELECT cost_pct,price_impact_bps,total_fee_usd,observed_at FROM execution_depth_snapshots WHERE market_id=$1 AND notional_usd<=$2 ORDER BY observed_at DESC,notional_usd DESC LIMIT 1`,[q.id,q.notionalUsd]);
     const headline=finiteOrNull(row.rows[0].headline_rate),cost=x.rowCount?finiteOrNull(x.rows[0].cost_pct):null;
     const annualizedCost=cost==null?null:cost*365/q.horizonDays,adjusted=headline==null||annualizedCost==null?null:headline-annualizedCost;
     return envelope(request,{market:{id:q.id,name:row.rows[0].market_name},headlineYield:headline,executionCostPct:cost,annualizedExecutionCost:annualizedCost,adjustedYield:adjusted,expectedCreditLoss:null,methodologyVersion:"adjusted-yield-v1",availability:adjusted==null?"unavailable":"available",note:"Credit loss remains unavailable until defensible loss inputs exist."});
