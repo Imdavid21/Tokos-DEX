@@ -119,7 +119,7 @@ export async function liveFallback<T>(path:string):Promise<Envelope<T>|null>{
   }
   if(path.startsWith("/risk/markets"))return{data:await liveRisk(rows,asOf,queryLimit(path)) as T,meta};
   if(path.startsWith("/risk/entities")){const risk=await liveRisk(rows,asOf,80);return{data:risk.map(x=>({entity_type:"market",entity_id:x.id,observations:x.observations.length,as_of:asOf,metrics:x.observations.map(o=>({dimension:o.dimension,metricKey:o.metricKey,value:o.value,severity:o.severity}))})) as T,meta}}
-  if(path.startsWith("/dependencies/")){const parts=path.split("/").filter(Boolean),type=parts[1],id=decodeURIComponent(parts[2]??"");if(type!=="market")return null;const m=rows.find(x=>idOf(x)===id);return m?{data:dependencyGraph(m,asOf) as T,meta}:null}
+  if(path.startsWith("/dependencies/")){const parts=path.split("/").filter(Boolean),type=parts[1],id=decodeURIComponent(parts[2]??"");if(type==="market"){const m=rows.find(x=>idOf(x)===id);return m?{data:dependencyGraph(m,asOf) as T,meta}:null}if(type==="asset"||type==="protocol"||type==="chain"){const matches=rows.filter(m=>type==="asset"?symbolOf(m)===id:type==="protocol"?protocolIdOf(m)===id:String(m.chainId)===id);if(!matches.length)return null;const relation=type==="asset"?"used_by":type==="protocol"?"operates":"hosts",edges=matches.map(m=>({source_type:type,source_id:id,relationship:relation,target_type:"market",target_id:idOf(m),exposure_usd:tvlOf(m),weight:null,observed_at:asOf}));return{data:{root:{type,id},edges} as T,meta}}return null}
   return null;
  }catch{return null}
 }
