@@ -106,6 +106,40 @@ function entityDirectory(rows:PendleMarket[],kind:"asset"|"protocol"|"chain"){
  const result=[...groups.entries()].map(([id,ms])=>{const rates=ms.map(impliedApyOf).filter((x):x is number=>x!=null),assets=new Set(ms.map(symbolOf)),protocols=new Set(ms.map(protocolIdOf)),chains=new Set(ms.map(m=>String(m.chainId))),liquidity=ms.reduce((s,m)=>s+(liquidityOf(m)??0),0),tvl=ms.reduce((s,m)=>s+(tvlOf(m)??0),0);return{id,label:kind==="chain"?chainName(id):kind==="protocol"?protocolNameOf(ms[0]!):id,name:kind==="chain"?chainName(id):kind==="protocol"?protocolNameOf(ms[0]!):id,markets:ms.length,assets:assets.size,protocols:protocols.size,chains:chains.size,medianRate:median(rates),bestRate:rates.length?Math.max(...rates):null,depositsUsd:tvl||null,debtUsd:null,liquidityUsd:liquidity||null,utilization:null}}).sort((a,b)=>(b.liquidityUsd??0)-(a.liquidityUsd??0));
  return{kind,rows:result};
 }
+
+type EntityKind="asset"|"protocol"|"chain";
+function entityId(m:PendleMarket,kind:EntityKind){return kind==="asset"?symbolOf(m):kind==="protocol"?protocolIdOf(m):String(m.chainId)}
+function entityLabel(ms:PendleMarket[],kind:EntityKind,id:string){return kind==="chain"?chainName(id):kind==="protocol"?(ms[0]?protocolNameOf(ms[0]):id):id}
+function entityMatches(rows:PendleMarket[],kind:EntityKind,id:string){return rows.filter(m=>entityId(m,kind)===id)}
+function breakdownRows(ms:PendleMarket[],kind:"asset"|"protocol"|"chain"){
+ const groups=new Map<string,{label:string;value:number;markets:number}>();
+ for(const m of ms){
+  const key=kind==="asset"?symbolOf(m):kind==="protocol"?protocolIdOf(m):String(m.chainId),label=kind==="asset"?symbolOf(m):kind==="protocol"?protocolNameOf(m):chainName(String(m.chainId)),x=groups.get(key)??{label,value:0,markets:0};
+  x.value+=tvlOf(m)??0;x.markets++;groups.set(key,x);
+ }
+ return[...groups.entries()].map(([key,x])=>({key,label:x.label,value:x.value||null,markets:x.markets})).sort((a,b)=>(b.value??0)-(a.value??0));
+}
+async function entityDetail(rows:PendleMarket[],kind:EntityKind,id:string,asOf:string){
+ const ms=entityMatches(rows,kind,id);if(!ms.length)return null;
+ const selected=[...ms].sort((a,b)=>(liquidityOf(b)??0)-(liquidityOf(a)??0)).slice(0,16),series=await Promise.all(selected.map(async market=>({market,points:await fetchHistory(market,90)}))),agg=aggregateHistory(series),rates=ms.map(impliedApyOf).filter((x):x is number=>x!=null),assets=new Set(ms.map(symbolOf)),protocols=new Set(ms.map(protocolIdOf)),chains=new Set(ms.map(m=>String(m.chainId))),tvl=ms.reduce((s,m)=>s+(tvlOf(m)??0),0),liq=ms.reduce((s,m)=>s+(liquidityOf(m)??0),0);
+ const history=agg.map(x=>({observedAt:x.observedAt,rate:x.medianYield,fixedRate:x.fixedYield,floatingRate:x.floatingYield,borrowRate:x.borrowRate,tvlUsd:x.tvlUsd,liquidityUsd:x.liquidityUsd,utilization:x.utilization}));
+ const landscape=ms.map(m=>({id:idOf(m),market_name:nameOf(m),protocol_id:protocolIdOf(m),protocol_name:protocolNameOf(m),chain_id:String(m.chainId),chain_name:chainName(String(m.chainId)),asset_id:slug(symbolOf(m)),asset_symbol:symbolOf(m),maturity:maturityOf(m),rate:impliedApyOf(m),liquidity_usd:liquidityOf(m),tvl_usd:tvlOf(m),rate_type:"fixed",observed_at:asOf}));
+ return{kind,entity:{id,label:entityLabel(ms,kind,id),name:entityLabel(ms,kind,id),asset_group:kind==="asset"?assetGroup(id):undefined,slug:kind==="protocol"?id:undefined},summary:{marketCount:ms.length,protocolCount:protocols.size,chainCount:chains.size,assetCount:assets.size,depositsUsd:tvl||null,debtUsd:null,liquidityUsd:liq||null,medianRate:median(rates),bestRate:rates.length?Math.max(...rates):null,utilization:null,fixedMarkets:ms.length,floatingMarkets:0},history,breakdowns:{protocols:breakdownRows(ms,"protocol"),chains:breakdownRows(ms,"chain"),assets:breakdownRows(ms,"asset")},distribution:rates,landscape,markets:screener(ms,asOf,series),methodologyVersion:"pendle-live"};
+}
+async function entityRisk(rows:PendleMarket[],kind:EntityKind,id:string){
+ const ms=entityMatches(rows,kind,id);if(!ms.length)return null;
+ const selected=[...ms].sort((a,b)=>(liquidityOf(b)??0)-(liquidityOf(a)??0)).slice(0,12),series=await Promise.all(selected.map(async market=>({market,points:await fetchHistory(market,30)}))),liq=ms.reduce((s,m)=>s+(liquidityOf(m)??0),0),observations:Array<{dimension:string;metric_key:string;value:number;unit:string;severity:Severity}>=[];
+ if(liq>0)observations.push({dimension:"liquidity",metric_key:"aggregate_liquidity_usd",value:liq,unit:"usd",severity:liquiditySeverity(liq)});
+ const aggregateRates=aggregateHistory(series).map(x=>x.medianYield).filter((x):x is number=>x!=null),vol=std(aggregateRates);
+ if(vol!=null)observations.push({dimension:"rate-volatility",metric_key:"aggregate_rate_volatility_30d",value:vol,unit:"ratio",severity:volatilitySeverity(vol)});
+ return{observations};
+}
+function entityDependencies(rows:PendleMarket[],kind:EntityKind,id:string){
+ const ms=entityMatches(rows,kind,id);if(!ms.length)return null;
+ const outgoing=ms.slice(0,40).map(m=>({relationship:kind==="asset"?"used_by":kind==="protocol"?"operates":"hosts",source_type:kind,source_id:id,target_type:"market",target_id:idOf(m),target_label:nameOf(m),detail:[symbolOf(m),protocolNameOf(m),chainName(String(m.chainId))].join(" · ")}));
+ return{outgoing,incoming:[]};
+}
+
 function tokenMeta(t:Token|undefined){if(typeof t!=="object"||t===null)return null;const symbol=t.symbol?.trim()||t.name?.trim()||null;if(!symbol)return null;return{symbol,name:t.name?.trim()||null,address:t.address?.toLowerCase()||null}}
 function cleanMarketAsset(v:string|undefined|null){if(!v)return null;const x=v.trim().replace(/^(PT|YT|SY)[-\s]/i,"").replace(/[-\s]+\d{1,2}[A-Z]{3}\d{2,4}$/i,"").replace(/[-\s]+\d{4}-\d{2}-\d{2}$/,"").trim();return x||null}
 function marketFacingUnderlying(m:PendleMarket){
@@ -150,15 +184,16 @@ export async function liveFallback<T>(path:string):Promise<Envelope<T>|null>{
   if(path.startsWith("/analytics/markets")){const series=await sampleHistory(rows,30);return{data:screener(rows,asOf,series) as T,meta}}
   if(path.startsWith("/market-trends")||path.startsWith("/analytics/market-changes"))return{data:{} as T,meta};
   if(path.startsWith("/methodologies"))return{data:[{slug:"evidence-rating-v1",name:"Tokos Evidence Rating",version:"v1-live",scope:"market",description:"Ordinal evidence rating computed from live provider observations. Live mode currently uses observed liquidity and 30-day rate volatility; unavailable dimensions remain missing rather than imputed."}] as T,meta};
-  if(path.startsWith("/analytics/entities/")){const kind=path.split("/")[3] as "asset"|"protocol"|"chain";if(!["asset","protocol","chain"].includes(kind))return null;return{data:entityDirectory(rows,kind) as T,meta}}
+  if(path.startsWith("/analytics/entities/")){const parts=path.split("/").filter(Boolean),kind=parts[2] as EntityKind;if(!["asset","protocol","chain"].includes(kind))return null;const rawId=parts[3];if(rawId){const id=decodeURIComponent(rawId),detail=await entityDetail(rows,kind,id,asOf);return detail?{data:detail as T,meta}:null}return{data:entityDirectory(rows,kind) as T,meta}}
   if(path.startsWith("/analytics/compare"))return{data:await compareLive(rows,path) as T,meta};
   if(path.startsWith("/risk/markets/")&&path.includes("/scenario")){
    const raw=decodeURIComponent(path.split("/risk/markets/")[1]?.split("/scenario")[0]??""),m=rows.find(x=>idOf(x)===raw);if(!m)return null;const u=new URL(path,"https://tokos.local"),rateShock=Number(u.searchParams.get("rateShockBps")??-200)/10000,liqShock=Number(u.searchParams.get("liquidityShockPct")??-.5),notional=Number(u.searchParams.get("notionalUsd")??100000),rate=impliedApyOf(m),liq=liquidityOf(m);return{data:{market:{id:idOf(m),name:nameOf(m)},inputs:{rateShockBps:rateShock*10000,liquidityShockPct:liqShock,notionalUsd:notional},baseline:{rate,liquidityUsd:liq,utilization:null},stressed:{rate:rate==null?null:rate+rateShock,liquidityUsd:liq==null?null:Math.max(0,liq*(1+liqShock)),utilization:null,notionalCapacity:liq==null||notional<=0?null:Math.min(1,Math.max(0,liq*(1+liqShock))/notional)},note:"Deterministic live-provider stress. No probability forecast."} as T,meta}
   }
   if(path.startsWith("/risk/markets"))return{data:await liveRisk(rows,asOf,queryLimit(path)) as T,meta};
   if(path.startsWith("/risk/entities/market/")){const id=requestedMarketId(path,"/risk/entities/market/"),m=rows.find(x=>idOf(x)===id);if(!m)return null;const points=await fetchHistory(m,30),observations=riskObservations(m,points);return{data:{observations:observations.map(o=>({dimension:o.dimension,metric_key:o.metricKey,value:o.value,unit:o.unit,severity:o.severity}))} as T,meta}}
+  if(/^\/risk\/entities\/(asset|protocol|chain)\//.test(path)){const parts=path.split("/").filter(Boolean),kind=parts[2] as EntityKind,id=decodeURIComponent(parts[3]??""),data=await entityRisk(rows,kind,id);return data?{data:data as T,meta}:null}
   if(path.startsWith("/risk/entities")){const risk=await liveRisk(rows,asOf,80);return{data:risk.map(x=>({entity_type:"market",entity_id:x.id,observations:x.observations.length,as_of:asOf,metrics:x.observations.map(o=>({dimension:o.dimension,metricKey:o.metricKey,value:o.value,severity:o.severity}))})) as T,meta}}
-  if(path.startsWith("/dependencies/")){const parts=path.split("/").filter(Boolean),type=parts[1],id=decodeURIComponent(parts[2]??"");if(type==="market"){const m=rows.find(x=>idOf(x)===id);if(!m)return null;const graph=dependencyGraph(m,asOf),outgoing=(graph.edges as Array<Record<string,unknown>>).map(e=>({relationship:e.relationship,source_type:e.source_type,source_id:e.source_id,target_type:e.target_type,target_id:e.target_id,target_label:e.target_label??null,detail:e.detail??null,depth:e.depth??null,source:e.source??null}));return{data:(path.includes("/graph")?graph:{outgoing,incoming:[]}) as T,meta}}if(type==="asset"||type==="protocol"||type==="chain"){const matches=rows.filter(m=>type==="asset"?symbolOf(m)===id:type==="protocol"?protocolIdOf(m)===id:String(m.chainId)===id);if(!matches.length)return null;const relation=type==="asset"?"used_by":type==="protocol"?"operates":"hosts",edges=matches.map(m=>({source_type:type,source_id:id,relationship:relation,target_type:"market",target_id:idOf(m),exposure_usd:tvlOf(m),weight:null,observed_at:asOf}));return{data:{root:{type,id},edges} as T,meta}}return null}
+  if(path.startsWith("/dependencies/")){const parts=path.split("/").filter(Boolean),type=parts[1],id=decodeURIComponent(parts[2]??"");if(type==="market"){const m=rows.find(x=>idOf(x)===id);if(!m)return null;const graph=dependencyGraph(m,asOf),outgoing=(graph.edges as Array<Record<string,unknown>>).map(e=>({relationship:e.relationship,source_type:e.source_type,source_id:e.source_id,target_type:e.target_type,target_id:e.target_id,target_label:e.target_label??null,detail:e.detail??null,depth:e.depth??null,source:e.source??null}));return{data:(path.includes("/graph")?graph:{outgoing,incoming:[]}) as T,meta}}if(type==="asset"||type==="protocol"||type==="chain"){const deps=entityDependencies(rows,type,id);if(!deps)return null;if(path.includes("/graph")){const edges=deps.outgoing.map(e=>({...e,exposure_usd:null,weight:null,observed_at:asOf}));return{data:{root:{type,id},edges} as T,meta}}return{data:deps as T,meta}}return null}
   return null;
  }catch{return null}
 }
