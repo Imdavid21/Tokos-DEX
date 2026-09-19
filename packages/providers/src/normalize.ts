@@ -14,7 +14,7 @@ export function normalizeOneDeltaMarket(item:OneDeltaLatestItem,source:OneDeltaL
  const supply=pctToDecimal(source.depositRate);const snapshot:MarketSnapshot={marketId:id,observedAt,sourceObservedAt:observedAt,ingestedAt:new Date().toISOString(),supplyApr:supply,borrowApr:pctToDecimal(source.variableBorrowRate),fixedApy:null,impliedApy:null,underlyingApy:null,depositsUsd:source.totalDepositsUsd??null,debtUsd:source.totalDebtUsd??null,liquidityUsd:source.totalLiquidityUsd??null,tvlUsd:source.totalDepositsUsd!=null?source.totalDepositsUsd-(source.totalDebtUsd??0):null,utilization:normalizeUtilization(source.utilization),volume24hUsd:null,rewardApr:null,intrinsicApr:pctToDecimal(source.intrinsicYield),aprExRewards:supply,stale:false,rawPayloadHash:payloadHash(source)};
  return{asset,chain,protocol,market,snapshot,raw:source};
 }
-const chainNames:Record<string,string>={"1":"Ethereum","10":"Optimism","56":"BNB Chain","100":"Gnosis","130":"Unichain","143":"Monad","146":"Sonic","196":"X Layer","999":"HyperEVM","5000":"Mantle","8453":"Base","9745":"Plasma","42161":"Arbitrum","43114":"Avalanche","57073":"Ink","80094":"Berachain","747474":"Katana"};
+const chainNames:Record<string,string>={"1":"Ethereum","10":"Optimism","56":"BNB Chain","100":"Gnosis","130":"Unichain","143":"Monad","146":"Sonic","196":"X Layer","999":"HyperEVM","4663":"Robinhood Chain","5000":"Mantle","8453":"Base","9745":"Plasma","42161":"Arbitrum","43114":"Avalanche","57073":"Ink","80094":"Berachain","747474":"Katana"};
 const pendleImplied=(s:PendleMarket)=>s.impliedApy??s.details?.impliedApy??null;
 const pendleUnderlying=(s:PendleMarket)=>s.underlyingApy??s.details?.underlyingApy??null;
 const pendleTvl=(s:PendleMarket)=>s.tvl?.usd??s.details?.totalTvl??null;
