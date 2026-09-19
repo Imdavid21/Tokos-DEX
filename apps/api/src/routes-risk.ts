@@ -10,6 +10,30 @@ const riskEntityType=z.enum(["asset","market","protocol","chain","vault","curato
 export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
   const db=dbPool(env.DATABASE_URL);
 
+
+  app.get("/v1/risk/markets",async(request,reply)=>{
+    const parsed=z.object({limit:z.coerce.number().int().min(1).max(250).default(100)}).safeParse(request.query);
+    if(!parsed.success)return reply.code(400).send({error:{code:"INVALID_FILTER",message:"Invalid risk filter",requestId:request.id}});
+    const rows=await db.query(`
+      WITH latest AS(
+        SELECT DISTINCT ON(entity_id,dimension,metric_key) entity_id,dimension,metric_key,value,unit,severity,confidence,observed_at,stale
+        FROM risk_observations WHERE entity_type='market'
+        ORDER BY entity_id,dimension,metric_key,observed_at DESC
+      )
+      SELECT lm.id,lm.market_name,lm.asset_symbol,lm.protocol_name,lm.chain_name,lm.liquidity_usd,
+        COALESCE(lm.supply_apr,lm.fixed_apy,lm.implied_apy) rate,
+        jsonb_agg(jsonb_build_object('dimension',r.dimension,'metricKey',r.metric_key,'value',r.value,'unit',r.unit,'severity',r.severity,'confidence',r.confidence,'observedAt',r.observed_at))
+          FILTER(WHERE r.entity_id IS NOT NULL) observations,
+        max(r.observed_at) risk_as_of,bool_or(COALESCE(r.stale,false)) risk_stale
+      FROM mv_latest_markets lm LEFT JOIN latest r ON r.entity_id=lm.id
+      WHERE lm.status='active'
+      GROUP BY lm.id,lm.market_name,lm.asset_symbol,lm.protocol_name,lm.chain_name,lm.liquidity_usd,lm.supply_apr,lm.fixed_apy,lm.implied_apy
+      ORDER BY count(r.entity_id) DESC,lm.liquidity_usd DESC NULLS LAST LIMIT $1
+    `,[parsed.data.limit]);
+    return envelope(request,rows.rows.map(r=>({...r,liquidity_usd:finiteOrNull(r.liquidity_usd),rate:finiteOrNull(r.rate),observations:r.observations??[]})),
+      {stale:rows.rows.some(r=>r.risk_stale),asOf:rows.rows.map(r=>r.risk_as_of).filter(Boolean).sort().at(-1)??null});
+  });
+
   app.get("/v1/risk/entities/:type/:id",async(request,reply)=>{
     const parsed=z.object({type:riskEntityType,id:z.string().min(1)}).safeParse(request.params);
     if(!parsed.success)return reply.code(400).send({error:{code:"INVALID_ENTITY",message:"Invalid risk entity",requestId:request.id}});
