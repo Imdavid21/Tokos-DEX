@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm build:packages && pnpm --parallel --filter @tokos-data/api --filter @tokos-data/worker --filter @tokos-data/web dev",
-    "build": "pnpm -r --if-present build",
+    "build": "pnpm -r --if-present --filter '!@tokos-data/db' build && pnpm --filter @tokos-data/db build",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm build:packages && pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
