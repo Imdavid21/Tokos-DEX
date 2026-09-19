@@ -10,14 +10,14 @@ type RiskMarket={id:string;market_name:string;asset_symbol:string|null;protocol_
 export default async function RiskPage(){
   const [methods,markets]=await Promise.all([maybeApi<Methodology[]>("/methodologies"),maybeApi<RiskMarket[]>("/risk/markets?limit=100")]);
   return <div className="page">
-    <div className="page-head"><div><h1 className="page-title">Risk</h1><div className="page-sub">Transparent risk observations and dependencies. No composite score.</div></div><div className="page-meta">foundation</div></div>
+    <div className="page-head"><div><h1 className="page-title">Risk</h1><div className="page-sub">Transparent risk observations and dependencies. No composite score.</div></div><div className="page-meta">capital intelligence v2</div></div>
     <section className="section analytics-grid two">
       <div className="panel"><div className="panel-head"><span className="panel-title">Framework</span></div><div className="panel-body">
         <div className="stat-grid">
           <div className="stat-cell"><div className="stat-label">Asset</div><div className="stat-value">observable risk dimensions</div></div>
           <div className="stat-cell"><div className="stat-label">Market</div><div className="stat-value">liquidity, volatility, utilization, dependencies</div></div>
-          <div className="stat-cell"><div className="stat-label">Vault</div><div className="stat-value">planned after allocation coverage</div></div>
-          <div className="stat-cell"><div className="stat-label">Portfolio</div><div className="stat-value">later phase, outside current V0 contract</div></div>
+          <div className="stat-cell"><div className="stat-label">Vault / curator</div><div className="stat-value">supported when source-backed allocation data exists</div></div>
+          <div className="stat-cell"><div className="stat-label">Stress</div><div className="stat-value">deterministic scenarios + execution-adjusted yield</div></div>
         </div>
       </div></div>
       <div className="panel"><div className="panel-head"><span className="panel-title">Principle</span></div><div className="panel-body">
