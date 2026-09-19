@@ -1,3 +1,4 @@
+import{chainLabel}from"./chains";
 type Envelope<T>={data:T;meta:{asOf:string;stale:boolean;requestId:string;nextCursor?:string|null;hasMore?:boolean}};
 
 type TokenObject={address?:string;symbol?:string;name?:string;decimals?:number;price?:{usd?:number|null}};
@@ -10,7 +11,6 @@ type HistoricalPage={results?:HistoricalPoint[]};
 type MarketHistory={market:PendleMarket;points:HistoricalPoint[]};
 
 const PENDLE=(process.env.PENDLE_API_BASE_URL??"https://api-v2.pendle.finance/core").replace(/\/$/,"");
-const chainNames:Record<string,string>={"1":"Ethereum","10":"Optimism","56":"BNB Chain","100":"Gnosis","130":"Unichain","146":"Sonic","42161":"Arbitrum","8453":"Base","5000":"Mantle","80094":"Berachain"};
 const slug=(v:string)=>v.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const assetGroup=(s:string)=>{const x=s.toUpperCase();if(["USDC","USDBC"].includes(x))return"usdc";if(["USDT","USD₮0"].includes(x))return"usdt";if(["ETH","WETH"].includes(x))return"eth";if(["BTC","WBTC","CBBTC","TBTC"].includes(x))return"btc";if(["USDE","SUSDE"].includes(x))return"usde";return slug(x)};
 const toMs=(x:string|number)=>typeof x==="number"?(x>1e12?x:x*1000):(/^\d+(?:\.\d+)?$/.test(x)?Number(x)*(Number(x)>1e12?1:1000):Date.parse(x));
@@ -31,7 +31,7 @@ function protocolNameOf(m:PendleMarket){return m.protocol?.trim()||"Pendle"}
 function protocolIdOf(m:PendleMarket){return slug(protocolNameOf(m))||"pendle"}
 function idOf(m:PendleMarket){return `pendle:${m.chainId}:${m.address.toLowerCase()}`}
 function maturityOf(m:PendleMarket){return new Date(toMs(m.expiry)).toISOString()}
-function chainName(id:string){return chainNames[id]??`Chain ${id}`}
+function chainName(id:string){return chainLabel(id)}
 function median(v:number[]){if(!v.length)return null;const s=[...v].sort((a,b)=>a-b),i=Math.floor(s.length/2);return s.length%2?s[i]??null:((s[i-1]??0)+(s[i]??0))/2}
 function std(v:number[]){if(v.length<2)return null;const mean=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((a,b)=>a+(b-mean)**2,0)/(v.length-1))}
 function historyRef(p:HistoricalPoint){const underlying=num(p.underlyingApy);return underlying!=null&&underlying!==0?underlying:num(p.baseApy)}
@@ -97,7 +97,7 @@ function dependencyGraph(m:PendleMarket,asOf:string){const id=idOf(m),s=symbolOf
 async function compareLive(rows:PendleMarket[],path:string){
  const u=new URL(path,"https://tokos.local"),ids=(u.searchParams.get("marketIds")??"").split(",").filter(Boolean).slice(0,6),days=Number(u.searchParams.get("days")??90);
  const selected=rows.filter(m=>ids.includes(idOf(m))),series=await Promise.all(selected.map(async market=>({market,points:await fetchHistory(market,days)})));
- const marketsOut=selected.map(m=>({id:idOf(m),marketName:nameOf(m),assetSymbol:symbolOf(m),protocolName:protocolNameOf(m),chainName:chainName(String(m.chainId)),supplyApr:null,fixedApy:impliedApyOf(m),impliedApy:impliedApyOf(m),liquidityUsd:liquidityOf(m),tvlUsd:tvlOf(m),depositsUsd:null,debtUsd:null,utilization:null,maturity:maturityOf(m),change24hBps:null,effectiveRate:null,priceImpactBps:null,depthNotionalUsd:null}));
+ const marketsOut=selected.map(m=>({id:idOf(m),marketName:nameOf(m),assetSymbol:symbolOf(m),protocolName:protocolNameOf(m),chainId:String(m.chainId),chainName:chainName(String(m.chainId)),supplyApr:null,fixedApy:impliedApyOf(m),impliedApy:impliedApyOf(m),liquidityUsd:liquidityOf(m),tvlUsd:tvlOf(m),depositsUsd:null,debtUsd:null,utilization:null,maturity:maturityOf(m),change24hBps:null,effectiveRate:null,priceImpactBps:null,depthNotionalUsd:null}));
  const history=series.flatMap(({market,points})=>points.map(p=>({marketId:idOf(market),observedAt:new Date(p.timestamp).toISOString(),rate:num(p.impliedApy),liquidityUsd:null,tvlUsd:num(p.tvl),utilization:null})));
  return{markets:marketsOut,history,methodologyVersion:"pendle-live"};
 }

@@ -4,6 +4,7 @@ import {useState} from "react";
 import {DataState} from "./DataState";
 import {Sparkline} from "./Chart";
 import {ago,pct,shortId,usd,bps} from "@/lib/format";
+import {chainLabel} from "@/lib/chains";
 
 type TrendPoint=[string|number,number|null];
 export type MarketRow={id:string;assetId:string;assetSymbol?:string;marketName:string;protocolId:string;protocolName?:string;chainId:string;chainName?:string;rateType:string;provider:string;supplyApr:number|null;borrowApr:number|null;fixedApy:number|null;impliedApy?:number|null;liquidityUsd:number|null;utilization:number|null;depositsUsd:number|null;tvlUsd?:number|null;change24hBps?:number|null;observedAt:string;stale:boolean;maturity?:string|null;rateTrend?:TrendPoint[]};
@@ -21,7 +22,7 @@ export function MarketsTable({rows,selectable=false}:{rows:MarketRow[];selectabl
       {selectable&&<td><input type="checkbox" name="markets" value={r.id} aria-label={`Select ${r.marketName}`} checked={selected.includes(r.id)} onChange={()=>toggle(r.id)} disabled={!selected.includes(r.id)&&selected.length>=6}/></td>}
       <td className="identity sticky-col">{r.assetSymbol??r.assetId.toUpperCase()}</td>
       <td className="sticky-col-2"><Link href={`/market/${encodeURIComponent(r.id)}`} className="identity">{r.marketName}</Link><div className="provider" title={r.id}>{shortId(r.id)}</div></td>
-      <td><Link href={`/protocol/${r.protocolId}`}>{r.protocolName??r.protocolId}</Link></td><td><Link href={`/chain/${r.chainId}`}>{r.chainName??r.chainId}</Link></td><td><span className="tag">{r.rateType}</span></td>
+      <td><Link href={`/protocol/${r.protocolId}`}>{r.protocolName??r.protocolId}</Link></td><td><Link href={`/chain/${r.chainId}`}>{chainLabel(r.chainId,r.chainName)}</Link></td><td><span className="tag">{r.rateType}</span></td>
       <td className="num identity">{pct(rate)}</td><td className="num">{pct(r.borrowApr)}</td><td className={`num ${(r.change24hBps??0)>0?"positive":(r.change24hBps??0)<0?"negative":""}`}>{bps(r.change24hBps)}</td><td className="num">{usd(r.liquidityUsd)}</td><td className="num">{pct(r.utilization,1)}</td>
       {showTrend&&<td style={{width:92,height:42}}>{r.rateTrend?.length?<Sparkline data={r.rateTrend} label={`${r.marketName} rate trend`}/>:<span className="subtle">—</span>}</td>}
       <td>{r.stale?<span className="tag stale-tag">Stale</span>:ago(r.observedAt)}</td>
