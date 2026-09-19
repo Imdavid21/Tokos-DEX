@@ -72,6 +72,30 @@ export async function materializeRiskIntelligence(env:ServerEnv){
       }
     }
 
+    // Propagate observed market risk to parent entities without inventing new credit probabilities.
+    for(const kind of ["asset","protocol","chain"] as const){
+      const col=kind+"_id";
+      const rows=await db.query(`
+        WITH latest AS(
+          SELECT DISTINCT ON(entity_id,metric_key) entity_id,metric_key,value,severity
+          FROM risk_observations WHERE entity_type='market' ORDER BY entity_id,metric_key,observed_at DESC
+        )
+        SELECT lm.${col} entity_id,l.metric_key,avg(l.value) value,count(*) markets
+        FROM mv_latest_markets lm JOIN latest l ON l.entity_id=lm.id
+        WHERE lm.status='active' AND lm.${col} IS NOT NULL
+        GROUP BY lm.${col},l.metric_key
+      `);
+      for(const r of rows.rows){
+        const value=Number(r.value); if(!Number.isFinite(value))continue;
+        await db.query(`
+          INSERT INTO risk_observations(entity_type,entity_id,dimension,metric_key,value,unit,direction,severity,confidence,source,observed_at,methodology_version,assumptions,stale,metadata)
+          VALUES($1,$2,'market_exposure',$3,$4,'normalized','neutral',NULL,.8,'tokos-derived',$5,$6,'["Mean of observed child-market metric; not a credit rating"]',false,$7)
+          ON CONFLICT DO NOTHING
+        `,[kind,r.entity_id,'mean_'+r.metric_key,value,observedAt,METHODOLOGY,JSON.stringify({markets:Number(r.markets)})]);
+        observations++;
+      }
+    }
+
     // Entity concentration: HHI of tracked deposits/TVL by market, preserving missingness.
     for(const kind of ["asset","protocol","chain"] as const){
       const col=kind+"_id";

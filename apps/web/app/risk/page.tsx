@@ -1,39 +1,7 @@
-import Link from "next/link";
-import {maybeApi} from "@/lib/api";
-import {Unavailable} from "@/components/DataState";
-
-export const metadata={title:"Risk"};
-
+import Link from"next/link";import{maybeApi}from"@/lib/api";import{Unavailable}from"@/components/DataState";import{pct,usd}from"@/lib/format";
+export const metadata={title:"Credit Risk"};
 type Methodology={slug:string;name:string;version:string;scope:string;description:string};
-type RiskMarket={id:string;market_name:string;asset_symbol:string|null;protocol_name:string|null;chain_name:string|null;liquidity_usd:number|null;rate:number|null;observations:Array<{dimension:string;metricKey:string;value:number;unit:string;severity:string|null}>};
-
-export default async function RiskPage(){
-  const [methods,markets]=await Promise.all([maybeApi<Methodology[]>("/methodologies"),maybeApi<RiskMarket[]>("/risk/markets?limit=100")]);
-  return <div className="page">
-    <div className="page-head"><div><h1 className="page-title">Risk</h1><div className="page-sub">Transparent risk observations and dependencies. No composite score.</div></div><div className="page-meta">foundation</div></div>
-    <section className="section analytics-grid two">
-      <div className="panel"><div className="panel-head"><span className="panel-title">Framework</span></div><div className="panel-body">
-        <div className="stat-grid">
-          <div className="stat-cell"><div className="stat-label">Asset</div><div className="stat-value">observable risk dimensions</div></div>
-          <div className="stat-cell"><div className="stat-label">Market</div><div className="stat-value">liquidity, volatility, utilization, dependencies</div></div>
-          <div className="stat-cell"><div className="stat-label">Vault</div><div className="stat-value">planned after allocation coverage</div></div>
-          <div className="stat-cell"><div className="stat-label">Portfolio</div><div className="stat-value">later phase, outside current V0 contract</div></div>
-        </div>
-      </div></div>
-      <div className="panel"><div className="panel-head"><span className="panel-title">Principle</span></div><div className="panel-body">
-        <p>Risk remains decomposed into source metrics, confidence, provenance, and methodology. Missing observations remain unavailable rather than inferred.</p>
-      </div></div>
-    </section>
-    <section className="section"><h2 className="section-title">Market risk monitor</h2>
-      {!markets?<Unavailable title="Risk observations are accumulating"/>:<div className="table-wrap"><table className="data"><thead><tr><th>Market</th><th>Protocol</th><th>Chain</th><th>Yield</th><th>Liquidity</th><th>Observed dimensions</th></tr></thead><tbody>
-      {markets.data.map(m=><tr key={m.id}><td className="identity"><Link href={`/market/${encodeURIComponent(m.id)}`}>{m.market_name}</Link></td><td>{m.protocol_name??"—"}</td><td>{m.chain_name??"—"}</td><td className="mono">{m.rate==null?"—":(m.rate*100).toFixed(2)+"%"}</td><td className="mono">{m.liquidity_usd==null?"—":"$"+Math.round(m.liquidity_usd).toLocaleString()}</td><td>{m.observations.length?m.observations.map(x=>x.dimension).filter((x,i,a)=>a.indexOf(x)===i).join(", "):"—"}</td></tr>)}
-      </tbody></table></div>}
-    </section>
-    <section className="section"><h2 className="section-title">Methodologies</h2>
-      {!methods?<Unavailable title="Methodology registry unavailable"/>:
-      <div className="table-wrap"><table className="data"><thead><tr><th>Method</th><th>Version</th><th>Scope</th><th>Description</th></tr></thead><tbody>
-        {methods.data.map(m=><tr key={m.slug}><td className="identity"><Link href={`/methodology/${m.slug}`}>{m.name}</Link></td><td className="mono">{m.version}</td><td>{m.scope}</td><td>{m.description}</td></tr>)}
-      </tbody></table></div>}
-    </section>
-  </div>
-}
+type Obs={dimension:string;metricKey:string;value:number;unit:string;severity:string|null};
+type Rating={rating:string;score:number|null;coverage:number;worstSeverity:string|null;methodologyVersion:string};type RiskMarket={id:string;market_name:string;asset_symbol:string|null;protocol_name:string|null;chain_name:string|null;liquidity_usd:number|null;rate:number|null;observations:Obs[];rating:Rating};
+export default async function RiskPage(){const[methods,markets]=await Promise.all([maybeApi<Methodology[]>("/methodologies"),maybeApi<RiskMarket[]>("/risk/markets?limit=150")]);const rows=markets?.data??[],covered=rows.filter(x=>x.rating.rating!=="NR"),investment=covered.filter(x=>["AAA","AA","A","BBB"].includes(x.rating.rating)).length,speculative=covered.filter(x=>["BB","B","CCC"].includes(x.rating.rating)).length,top=covered.filter(x=>["AAA","AA"].includes(x.rating.rating)).length;return <div className="page credit-page"><div className="page-head"><div><h1 className="page-title">Credit Risk</h1><div className="page-sub">Institutional risk surveillance across onchain markets. Tokos Evidence Ratings translate observable market resilience into an auditable AAA–CCC scale. They are ordinal risk ratings, not default probabilities.</div></div><div className="page-meta">Methodology: evidence-rating-v1</div></div><div className="credit-summary"><div className="credit-score-card"><div className="credit-score-label">Coverage</div><div className="credit-score">{covered.length}</div><div className="credit-score-note">markets with observable risk evidence</div></div><div className="credit-kpis"><K label="AAA / AA" value={top}/><K label="Investment grade" value={investment}/><K label="Speculative" value={speculative}/><K label="Unrated" value={rows.length-covered.length}/></div></div><section className="section"><div className="section-bar"><div><h2 className="section-title">Market Ratings</h2><div className="page-sub">Ratings combine four observable dimensions with explicit weights, coverage requirements, and downgrade caps. NR means insufficient evidence.</div></div><div className="rating-legend"><span className="rating aaa">AAA</span><span className="rating aa">AA</span><span className="rating bbb">BBB</span><span className="rating bb">BB</span><span className="rating ccc">CCC</span></div></div>{!markets?<Unavailable title="Risk observations are accumulating"/>:<div className="table-wrap credit-table"><table className="data"><thead><tr><th>Rating</th><th>Asset / Market</th><th>Protocol</th><th>Network</th><th className="num">Yield</th><th className="num">Liquidity</th><th>Risk drivers</th><th>Score / coverage</th></tr></thead><tbody>{rows.map(m=>{const drivers=m.observations.filter(x=>["critical","high","elevated"].includes(x.severity??"")).map(x=>x.dimension).filter((x,i,a)=>a.indexOf(x)===i);return <tr key={m.id}><td><span className={`rating grade-${m.rating.rating.toLowerCase()}`}>{m.rating.rating}</span></td><td className="identity"><Link href={`/market/${encodeURIComponent(m.id)}`}><strong>{m.asset_symbol??"—"}</strong><span className="credit-market-name">{m.market_name}</span></Link></td><td>{m.protocol_name??"—"}</td><td>{m.chain_name??"—"}</td><td className="num mono">{pct(m.rate)}</td><td className="num mono">{usd(m.liquidity_usd)}</td><td>{drivers.length?drivers.join(", "):m.observations.length?"No elevated drivers":"Insufficient evidence"}</td><td className="mono">{m.rating.score==null?"—":m.rating.score.toFixed(1)} / {m.rating.coverage}%</td></tr>})}</tbody></table></div>}</section><section className="section credit-grid"><div className="panel"><div className="panel-head"><span className="panel-title">Risk framework</span></div><div className="panel-body credit-dimensions">{["Liquidity","Utilization","Rate volatility","Price impact","Concentration","Dependencies"].map(x=><div key={x}><b>{x}</b><span>observable evidence</span></div>)}</div></div><div className="panel"><div className="panel-head"><span className="panel-title">Credit intelligence</span></div><div className="panel-body credit-links"><Link href="/dependencies">Dependency map <span>→</span></Link><Link href="/scenarios">Stress scenarios <span>→</span></Link><Link href="/risk/entities">Entity coverage <span>→</span></Link><Link href="/compare">Compare markets <span>→</span></Link></div></div></section><section className="section"><h2 className="section-title">Methodology & governance</h2>{!methods?<Unavailable title="Methodology registry unavailable"/>:<div className="methodology-grid">{methods.data.map(m=><Link className="methodology-card" href={`/methodology/${m.slug}`} key={m.slug}><span className="methodology-scope">{m.scope}</span><strong>{m.name}</strong><p>{m.description}</p><span className="mono">{m.version}</span></Link>)}</div>}</section></div>}
+function K({label,value}:{label:string;value:number}){return <div className="credit-kpi"><span>{label}</span><strong>{value}</strong></div>}
