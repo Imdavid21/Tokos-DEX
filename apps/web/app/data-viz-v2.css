@@ -150,3 +150,35 @@ table.data .identity{color:var(--text)}
  .rating-scale>div{box-shadow:none}
  .risk-yield-bands>div{border-left:2px solid var(--border)}
 }
+
+/* Entity identity and surveillance semantics. */
+.entity-link{display:inline-flex;align-items:center;gap:8px}.entity-dot{width:7px;height:7px;border-radius:2px;background:var(--series-1);flex:0 0 auto}
+.entity-protocol .entity-dot{background:var(--series-2)}.entity-chain .entity-dot{background:var(--series-3)}.entity-asset .entity-dot{background:var(--series-1)}
+.dimension-chips{display:flex;gap:5px;flex-wrap:wrap}.severity-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:var(--slate)}
+.severity-low{background:var(--risk-aa)}.severity-moderate{background:var(--risk-bbb)}.severity-elevated{background:var(--risk-bb)}.severity-high,.severity-critical{background:var(--risk-ccc)}
+.rating-history-table td{height:52px}.rating-history-table .mono{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+
+/* Risk/yield band cards retain their grade identity even when filtered. */
+.risk-yield-bands>div:nth-child(1){background:color-mix(in srgb,var(--risk-aaa) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(2){background:color-mix(in srgb,var(--risk-aa) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(3){background:color-mix(in srgb,var(--risk-a) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(4){background:color-mix(in srgb,var(--risk-bbb) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(5){background:color-mix(in srgb,var(--risk-bb) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(6){background:color-mix(in srgb,var(--risk-b) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(7){background:color-mix(in srgb,var(--risk-ccc) 3%,var(--surface))}
+
+/* Stress test: baseline remains neutral/green, shocked state becomes coral. */
+.scenario-panel:nth-child(1) .scenario-panel-head>strong,.scenario-panel:nth-child(2) .scenario-panel-head>strong{color:var(--coral)}
+.scenario-row:first-of-type .scenario-fill{background:var(--slate)}
+.scenario-row:last-of-type .scenario-fill{background:var(--coral)}
+.scenario-capacity .capacity-fill{background:var(--tokos)}
+
+/* Comparison page uses stable market identity colors in the table as well as charts. */
+.compare-table tbody tr:nth-child(1) td:first-child{box-shadow:inset 3px 0 0 var(--series-1)}
+.compare-table tbody tr:nth-child(2) td:first-child{box-shadow:inset 3px 0 0 var(--series-2)}
+.compare-table tbody tr:nth-child(3) td:first-child{box-shadow:inset 3px 0 0 var(--series-3)}
+.compare-table tbody tr:nth-child(4) td:first-child{box-shadow:inset 3px 0 0 var(--series-4)}
+
+/* Research tables: the primary numeric signal can be picked out without coloring the whole row. */
+.risk-yield-table td:nth-child(5){color:var(--tokos);font-weight:620}
+.risk-yield-table td:nth-child(6){color:var(--blue)}
