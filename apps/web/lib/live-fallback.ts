@@ -95,16 +95,23 @@ function entityDirectory(rows:PendleMarket[],kind:"asset"|"protocol"|"chain"){
  return{kind,rows:result};
 }
 function tokenMeta(t:Token|undefined){if(typeof t!=="object"||t===null)return null;const symbol=t.symbol?.trim()||t.name?.trim()||null;if(!symbol)return null;return{symbol,name:t.name?.trim()||null,address:t.address?.toLowerCase()||null}}
+function cleanMarketAsset(v:string|undefined|null){if(!v)return null;const x=v.trim().replace(/^(PT|YT|SY)[-\s]/i,"").replace(/[-\s]+\d{1,2}[A-Z]{3}\d{2,4}$/i,"").replace(/[-\s]+\d{4}-\d{2}-\d{2}$/,"").trim();return x||null}
+function marketFacingUnderlying(m:PendleMarket){
+ const candidates=[cleanMarketAsset(m.name),cleanMarketAsset(tokenSymbol(m.sy)),cleanMarketAsset(tokenSymbol(m.pt)),cleanMarketAsset(tokenSymbol(m.underlyingAsset))].filter((x):x is string=>Boolean(x));
+ const protocol=protocolNameOf(m),network=chainName(String(m.chainId));
+ for(const symbol of candidates){if(resolveUnderlyingPath({symbol,protocol,network},3).length)return symbol}
+ return null;
+}
 function dependencyGraph(m:PendleMarket,asOf:string){
  const id=idOf(m),cid=String(m.chainId),pt=tokenMeta(m.pt),yt=tokenMeta(m.yt),sy=tokenMeta(m.sy),underlying=tokenMeta(m.underlyingAsset),edges:Array<Record<string,unknown>>=[];
  const add=(sourceType:string,sourceId:string,relationship:string,targetType:string,targetId:string,targetLabel:string,detail:string|null=null,depth=1,source:string|null=null)=>edges.push({source_type:sourceType,source_id:sourceId,relationship,target_type:targetType,target_id:targetId,target_label:targetLabel,detail,depth,source,exposure_usd:null,weight:null,observed_at:asOf});
  if(pt)add("market",id,"principal_token","principal token",pt.address??pt.symbol,pt.symbol,pt.name,1);
  if(yt)add("market",id,"yield_token","yield token",yt.address??yt.symbol,yt.symbol,yt.name,1);
  if(sy)add("market",id,"standardized_yield_wrapper","SY / wrapper",sy.address??sy.symbol,sy.symbol,sy.name,1);
- const rootUnderlying=underlying??{symbol:symbolOf(m),name:null,address:null};
+ const marketRoot=marketFacingUnderlying(m),rootUnderlying=marketRoot?{symbol:marketRoot,name:null,address:null}:underlying??{symbol:symbolOf(m),name:null,address:null};
  add("market",id,"underlying_asset","underlying asset",rootUnderlying.address??rootUnderlying.symbol,rootUnderlying.symbol,rootUnderlying.name,1);
  const resolved=resolveUnderlyingPath({symbol:rootUnderlying.symbol,address:rootUnderlying.address,protocol:protocolNameOf(m),network:chainName(cid)},3);
- const underlyingPath:Array<{symbol:string;role:string;relation:string|null;source:string}>=[{symbol:rootUnderlying.symbol,role:"Market underlying",relation:null,source:"Pendle market metadata"}];
+ const underlyingPath:Array<{symbol:string;role:string;relation:string|null;source:string}>=[{symbol:rootUnderlying.symbol,role:"Market asset",relation:null,source:marketRoot?"Verified market-asset mapping":"Pendle market metadata"}];
  let parent=rootUnderlying.symbol;
  resolved.forEach((step,index)=>{add("asset",parent,step.relation,"underlying asset",step.symbol,step.symbol,step.role,index+2,step.source);underlyingPath.push({symbol:step.symbol,role:step.role,relation:step.relation,source:step.source});parent=step.symbol});
  add("market",id,"source_protocol","protocol",protocolIdOf(m),protocolNameOf(m),null,1);
