@@ -192,3 +192,41 @@ Unless the user sets a different priority:
 5. keep the live provider fallback as resilience only.
 
 See `docs/KNOWLEDGE_TRANSFER.md` and `docs/TOKOS_DATA_MASTER_SPEC.md` for the full context and acceptance criteria.
+
+
+---
+
+## 2026-09-19 Risk intelligence upgrade
+
+Implemented on the risk-intelligence branch:
+
+- canonical entity dependency graph storage
+- transparent risk observation storage with provenance, confidence, severity, assumptions, staleness, and methodology version
+- methodology registry and public methodology API/UI
+- deterministic hourly Risk V1 materialization from existing normalized data
+  - available liquidity
+  - utilization
+  - 30-day rate volatility
+  - latest observed price impact
+  - market concentration HHI for asset/protocol/chain entities
+- automatic market -> asset/protocol/chain dependency edges
+- market risk screener
+- market and entity risk/dependency panels
+- explicit empty states when risk/dependency data is unavailable
+
+The implementation intentionally does not manufacture composite ratings, probability of default, probability of loss, or expected loss. Those require additional source coverage and a separately versioned methodology.
+
+### Next data expansion
+
+Future risk dimensions should be added only when verifiable source data is available:
+
+- issuer and backing dependencies
+- oracle dependencies
+- bridge/wrapper dependencies
+- vault allocation and curator relationships
+- liquidation and bad-debt history
+- governance/admin-key controls
+- audit and exploit history
+- redemption/liquidity stress data
+
+Risk-adjusted yield remains blocked until an expected-loss methodology is empirically defensible.
