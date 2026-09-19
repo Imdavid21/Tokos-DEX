@@ -2,7 +2,7 @@ import{resolveUnderlyingPath}from"./underlyings";
 import{chainLabel}from"./chains";
 type Envelope<T>={data:T;meta:{asOf:string;stale:boolean;requestId:string;nextCursor?:string|null;hasMore?:boolean}};
 
-type TokenObject={address?:string;symbol?:string;name?:string;decimals?:number;price?:{usd?:number|null}};
+type TokenObject={address?:string|undefined;symbol?:string|undefined;name?:string|undefined;decimals?:number|undefined;price?:{usd?:number|null}|undefined};
 type Token=TokenObject|string;
 type PendleDetails={liquidity?:number|null;totalTvl?:number|null;tradingVolume?:number|null;underlyingApy?:number|null;impliedApy?:number|null};
 type PendleMarket={chainId:string|number;address:string;expiry:string|number;impliedApy?:number|null;underlyingApy?:number|null;tvl?:{usd?:number|null};liquidity?:{usd?:number|null};volume24h?:{usd?:number|null};details?:PendleDetails;pt?:Token|undefined;yt?:Token|undefined;sy?:Token|undefined;underlyingAsset?:Token|undefined;name?:string;protocol?:string};
