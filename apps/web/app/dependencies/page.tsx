@@ -1,4 +1,4 @@
-import Link from"next/link";import{maybeApi}from"@/lib/api";import{Unavailable}from"@/components/DataState";
+import{maybeApi}from"@/lib/api";import{Unavailable}from"@/components/DataState";
 export const metadata={title:"Dependencies"};
 type E={source_type:string;source_id:string;relationship:string;target_type:string;target_id:string;exposure_usd:number|null;weight:number|null;observed_at:string};
 type R={root:{type:string;id:string};edges:E[]};
