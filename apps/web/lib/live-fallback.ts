@@ -48,4 +48,78 @@ function overview(rows:PendleMarket[],asOf:string,series:MarketHistory[]){const 
 
 function screener(rows:PendleMarket[],asOf:string,series:MarketHistory[]){const histories=new Map(series.map(x=>[idOf(x.market),x.points])),now=Date.parse(asOf);return rows.map(m=>{const maturity=maturityOf(m),days=Math.max(0,(new Date(maturity).getTime()-Date.now())/86400000),s=symbolOf(m),points=histories.get(idOf(m))??[],current=impliedApyOf(m),rates=points.map(p=>num(p.impliedApy)).filter((x):x is number=>x!=null),diffs=rates.slice(1).map((x,i)=>(x-(rates[i]??x))*10000),rank=current==null||!rates.length?null:rates.filter(x=>x<=current).length/rates.length;return{id:idOf(m),assetId:slug(s),assetSymbol:s,assetGroup:assetGroup(s),marketName:nameOf(m),protocolId:protocolIdOf(m),protocolName:protocolNameOf(m),chainId:String(m.chainId),chainName:chainName(String(m.chainId)),rateType:"fixed",supplyApr:null,borrowApr:null,fixedApy:current,impliedApy:current,underlyingApy:underlyingApyOf(m),rewardApr:null,liquidityUsd:liquidityOf(m),tvlUsd:tvlOf(m),depositsUsd:null,debtUsd:null,utilization:null,change24hBps:changeBps(current,pointAtOrBefore(points,now-86400000)),change7dBps:changeBps(current,pointAtOrBefore(points,now-7*86400000)),change30dBps:changeBps(current,pointAtOrBefore(points,now-30*86400000)),change1hBps:null,liquidityChange24h:null,tvlChange24h:null,utilizationChange24h:null,rateChangeVolatility30d:std(diffs),headlineEffectiveGapBps:null,volatility30d:std(rates),ratePercentile:rank,daysToMaturity:days,maturity,observedAt:asOf,stale:false,rateTrend:points.map(p=>[p.timestamp,num(p.impliedApy)])}})}
 
-export async function liveFallback<T>(path:string):Promise<Envelope<T>|null>{if(typeof window!=="undefined")return null;if(!path.startsWith("/analytics/overview")&&!path.startsWith("/analytics/markets")&&!path.startsWith("/market-trends")&&!path.startsWith("/analytics/market-changes"))return null;try{const rows=await markets(),asOf=new Date().toISOString(),days=queryDays(path),series=await sampleHistory(rows,path.startsWith("/analytics/overview")?days:30),meta={asOf,stale:false,requestId:"pendle-live-fallback"};if(path.startsWith("/analytics/overview"))return{data:overview(rows,asOf,series) as T,meta};if(path.startsWith("/analytics/markets"))return{data:screener(rows,asOf,series) as T,meta};return{data:{} as T,meta}}catch{return null}}
+type Severity="low"|"moderate"|"elevated"|"high";
+type RiskObservation={dimension:string;metricKey:string;value:number;unit:string;severity:Severity};
+type LiveRating={rating:string;score:number|null;coverage:number;worstSeverity:Severity|null;methodologyVersion:string};
+const severityRank:Record<Severity,number>={low:0,moderate:1,elevated:2,high:3};
+const severityPoints:Record<Severity,number>={low:100,moderate:75,elevated:45,high:15};
+function liquiditySeverity(v:number):Severity{return v<100000?"high":v<500000?"elevated":v<2000000?"moderate":"low"}
+function volatilitySeverity(v:number):Severity{return v>=.25?"high":v>=.12?"elevated":v>=.05?"moderate":"low"}
+function ratingFromEvidence(obs:RiskObservation[]):LiveRating{
+ const weights:Record<string,number>={liquidity:.35,"rate-volatility":.20,utilization:.25,"price-impact":.20};
+ const usable=obs.filter(o=>weights[o.dimension]!==undefined),coverage=usable.reduce((s,o)=>s+(weights[o.dimension]??0),0),coveragePct=Math.round(coverage*100);
+ const worst=usable.reduce<Severity|null>((w,o)=>!w||severityRank[o.severity]>severityRank[w]?o.severity:w,null);
+ if(coverage<.5)return{rating:"NR",score:null,coverage:coveragePct,worstSeverity:worst,methodologyVersion:"evidence-rating-v1-live"};
+ const score=usable.reduce((s,o)=>s+severityPoints[o.severity]*(weights[o.dimension]??0),0)/coverage;
+ let rating=score>=90?"AAA":score>=82?"AA":score>=72?"A":score>=62?"BBB":score>=50?"BB":score>=35?"B":"CCC";
+ if(worst==="high"&&["AAA","AA","A","BBB"].includes(rating))rating="BB";
+ else if(worst==="elevated"&&["AAA","AA","A"].includes(rating))rating="BBB";
+ return{rating,score:Number(score.toFixed(1)),coverage:coveragePct,worstSeverity:worst,methodologyVersion:"evidence-rating-v1-live"};
+}
+function riskObservations(m:PendleMarket,points:HistoricalPoint[]):RiskObservation[]{
+ const out:RiskObservation[]=[],liq=liquidityOf(m);
+ if(liq!=null)out.push({dimension:"liquidity",metricKey:"liquidity_usd",value:liq,unit:"usd",severity:liquiditySeverity(liq)});
+ const rates=points.map(p=>num(p.impliedApy)).filter((x):x is number=>x!=null),vol=std(rates);
+ if(vol!=null)out.push({dimension:"rate-volatility",metricKey:"rate_volatility_30d",value:vol,unit:"ratio",severity:volatilitySeverity(vol)});
+ return out;
+}
+async function liveRisk(rows:PendleMarket[],asOf:string,limit=150){
+ const selected=[...rows].sort((a,b)=>(liquidityOf(b)??0)-(liquidityOf(a)??0)).slice(0,Math.min(limit,40));
+ const series=await Promise.all(selected.map(async market=>({market,points:await fetchHistory(market,30)})));
+ const history=new Map(series.map(x=>[idOf(x.market),x.points]));
+ return rows.slice(0,limit).map(m=>{
+  const observations=riskObservations(m,history.get(idOf(m))??[]),rating=ratingFromEvidence(observations);
+  return{id:idOf(m),market_name:nameOf(m),asset_symbol:symbolOf(m),protocol_name:protocolNameOf(m),chain_name:chainName(String(m.chainId)),liquidity_usd:liquidityOf(m),rate:impliedApyOf(m),observations,rating,observed_at:asOf};
+ });
+}
+function queryLimit(path:string,fallback=150){try{const n=Number(new URL(path,"https://tokos.local").searchParams.get("limit")??fallback);return Number.isFinite(n)?Math.max(1,Math.min(500,Math.floor(n))):fallback}catch{return fallback}}
+function entityDirectory(rows:PendleMarket[],kind:"asset"|"protocol"|"chain"){
+ const groups=new Map<string,PendleMarket[]>();
+ for(const m of rows){const key=kind==="asset"?symbolOf(m):kind==="protocol"?protocolIdOf(m):String(m.chainId);const a=groups.get(key)??[];a.push(m);groups.set(key,a)}
+ const result=[...groups.entries()].map(([id,ms])=>{const rates=ms.map(impliedApyOf).filter((x):x is number=>x!=null),assets=new Set(ms.map(symbolOf)),protocols=new Set(ms.map(protocolIdOf)),chains=new Set(ms.map(m=>String(m.chainId))),liquidity=ms.reduce((s,m)=>s+(liquidityOf(m)??0),0),tvl=ms.reduce((s,m)=>s+(tvlOf(m)??0),0);return{id,label:kind==="chain"?chainName(id):kind==="protocol"?protocolNameOf(ms[0]!):id,name:kind==="chain"?chainName(id):kind==="protocol"?protocolNameOf(ms[0]!):id,markets:ms.length,assets:assets.size,protocols:protocols.size,chains:chains.size,medianRate:median(rates),bestRate:rates.length?Math.max(...rates):null,depositsUsd:tvl||null,debtUsd:null,liquidityUsd:liquidity||null,utilization:null}}).sort((a,b)=>(b.liquidityUsd??0)-(a.liquidityUsd??0));
+ return{kind,rows:result};
+}
+function dependencyGraph(m:PendleMarket,asOf:string){const id=idOf(m),s=symbolOf(m),pid=protocolIdOf(m),cid=String(m.chainId);return{root:{type:"market",id},edges:[
+ {source_type:"market",source_id:id,relationship:"uses_asset",target_type:"asset",target_id:s,exposure_usd:tvlOf(m),weight:null,observed_at:asOf},
+ {source_type:"market",source_id:id,relationship:"operated_by",target_type:"protocol",target_id:pid,exposure_usd:tvlOf(m),weight:null,observed_at:asOf},
+ {source_type:"market",source_id:id,relationship:"deployed_on",target_type:"chain",target_id:cid,exposure_usd:tvlOf(m),weight:null,observed_at:asOf}
+ ]}}
+async function compareLive(rows:PendleMarket[],path:string){
+ const u=new URL(path,"https://tokos.local"),ids=(u.searchParams.get("marketIds")??"").split(",").filter(Boolean).slice(0,6),days=Number(u.searchParams.get("days")??90);
+ const selected=rows.filter(m=>ids.includes(idOf(m))),series=await Promise.all(selected.map(async market=>({market,points:await fetchHistory(market,days)})));
+ const marketsOut=selected.map(m=>({id:idOf(m),marketName:nameOf(m),assetSymbol:symbolOf(m),protocolName:protocolNameOf(m),chainName:chainName(String(m.chainId)),supplyApr:null,fixedApy:impliedApyOf(m),impliedApy:impliedApyOf(m),liquidityUsd:liquidityOf(m),tvlUsd:tvlOf(m),depositsUsd:null,debtUsd:null,utilization:null,maturity:maturityOf(m),change24hBps:null,effectiveRate:null,priceImpactBps:null,depthNotionalUsd:null}));
+ const history=series.flatMap(({market,points})=>points.map(p=>({marketId:idOf(market),observedAt:new Date(p.timestamp).toISOString(),rate:num(p.impliedApy),liquidityUsd:null,tvlUsd:num(p.tvl),utilization:null})));
+ return{markets:marketsOut,history,methodologyVersion:"pendle-live"};
+}
+
+export async function liveFallback<T>(path:string):Promise<Envelope<T>|null>{
+ if(typeof window!=="undefined")return null;
+ const supported=path.startsWith("/analytics/overview")||path.startsWith("/analytics/markets")||path.startsWith("/market-trends")||path.startsWith("/analytics/market-changes")||path.startsWith("/risk/markets")||path.startsWith("/methodologies")||path.startsWith("/analytics/entities/")||path.startsWith("/risk/entities")||path.startsWith("/dependencies/")||path.startsWith("/analytics/compare");
+ if(!supported)return null;
+ try{
+  const rows=await markets(),asOf=new Date().toISOString(),days=queryDays(path),meta={asOf,stale:false,requestId:"live-provider-mode:pendle"};
+  if(path.startsWith("/analytics/overview")){const series=await sampleHistory(rows,days);return{data:overview(rows,asOf,series) as T,meta}}
+  if(path.startsWith("/analytics/markets")){const series=await sampleHistory(rows,30);return{data:screener(rows,asOf,series) as T,meta}}
+  if(path.startsWith("/market-trends")||path.startsWith("/analytics/market-changes"))return{data:{} as T,meta};
+  if(path.startsWith("/methodologies"))return{data:[{slug:"evidence-rating-v1",name:"Tokos Evidence Rating",version:"v1-live",scope:"market",description:"Ordinal evidence rating computed from live provider observations. Live mode currently uses observed liquidity and 30-day rate volatility; unavailable dimensions remain missing rather than imputed."}] as T,meta};
+  if(path.startsWith("/analytics/entities/")){const kind=path.split("/")[3] as "asset"|"protocol"|"chain";if(!["asset","protocol","chain"].includes(kind))return null;return{data:entityDirectory(rows,kind) as T,meta}}
+  if(path.startsWith("/analytics/compare"))return{data:await compareLive(rows,path) as T,meta};
+  if(path.startsWith("/risk/markets/")&&path.includes("/scenario")){
+   const raw=decodeURIComponent(path.split("/risk/markets/")[1]?.split("/scenario")[0]??""),m=rows.find(x=>idOf(x)===raw);if(!m)return null;const u=new URL(path,"https://tokos.local"),rateShock=Number(u.searchParams.get("rateShockBps")??-200)/10000,liqShock=Number(u.searchParams.get("liquidityShockPct")??-.5),notional=Number(u.searchParams.get("notionalUsd")??100000),rate=impliedApyOf(m),liq=liquidityOf(m);return{data:{market:{id:idOf(m),name:nameOf(m)},inputs:{rateShockBps:rateShock*10000,liquidityShockPct:liqShock,notionalUsd:notional},baseline:{rate,liquidityUsd:liq,utilization:null},stressed:{rate:rate==null?null:rate+rateShock,liquidityUsd:liq==null?null:Math.max(0,liq*(1+liqShock)),utilization:null,notionalCapacity:liq==null||notional<=0?null:Math.min(1,Math.max(0,liq*(1+liqShock))/notional)},note:"Deterministic live-provider stress. No probability forecast."} as T,meta}
+  }
+  if(path.startsWith("/risk/markets"))return{data:await liveRisk(rows,asOf,queryLimit(path)) as T,meta};
+  if(path.startsWith("/risk/entities")){const risk=await liveRisk(rows,asOf,80);return{data:risk.map(x=>({entity_type:"market",entity_id:x.id,observations:x.observations.length,as_of:asOf,metrics:x.observations.map(o=>({dimension:o.dimension,metricKey:o.metricKey,value:o.value,severity:o.severity}))})) as T,meta}}
+  if(path.startsWith("/dependencies/")){const parts=path.split("/").filter(Boolean),type=parts[1],id=decodeURIComponent(parts[2]??"");if(type!=="market")return null;const m=rows.find(x=>idOf(x)===id);return m?{data:dependencyGraph(m,asOf) as T,meta}:null}
+  return null;
+ }catch{return null}
+}
