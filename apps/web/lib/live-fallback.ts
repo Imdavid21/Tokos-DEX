@@ -5,7 +5,7 @@ type Envelope<T>={data:T;meta:{asOf:string;stale:boolean;requestId:string;nextCu
 type TokenObject={address?:string;symbol?:string;name?:string;decimals?:number;price?:{usd?:number|null}};
 type Token=TokenObject|string;
 type PendleDetails={liquidity?:number|null;totalTvl?:number|null;tradingVolume?:number|null;underlyingApy?:number|null;impliedApy?:number|null};
-type PendleMarket={chainId:string|number;address:string;expiry:string|number;impliedApy?:number|null;underlyingApy?:number|null;tvl?:{usd?:number|null};liquidity?:{usd?:number|null};volume24h?:{usd?:number|null};details?:PendleDetails;pt?:Token;yt?:Token;sy?:Token;underlyingAsset?:Token;name?:string;protocol?:string};
+type PendleMarket={chainId:string|number;address:string;expiry:string|number;impliedApy?:number|null;underlyingApy?:number|null;tvl?:{usd?:number|null};liquidity?:{usd?:number|null};volume24h?:{usd?:number|null};details?:PendleDetails;pt?:Token|undefined;yt?:Token|undefined;sy?:Token|undefined;underlyingAsset?:Token|undefined;name?:string;protocol?:string};
 type Page={total?:number;totalCount?:number;markets?:PendleMarket[];results?:PendleMarket[];data?:{total?:number;totalCount?:number;markets?:PendleMarket[];results?:PendleMarket[]}};
 type AssetMeta={chainId:string|number;address:string;symbol:string;name?:string};
 type AssetPage={assets?:AssetMeta[];data?:{assets?:AssetMeta[]}};
@@ -104,7 +104,7 @@ function dependencyGraph(m:PendleMarket,asOf:string){
  const rootUnderlying=underlying??{symbol:symbolOf(m),name:null,address:null};
  add("market",id,"underlying_asset","underlying asset",rootUnderlying.address??rootUnderlying.symbol,rootUnderlying.symbol,rootUnderlying.name,1);
  const resolved=resolveUnderlyingPath({symbol:rootUnderlying.symbol,address:rootUnderlying.address,protocol:protocolNameOf(m),network:chainName(cid)},3);
- const underlyingPath=[{symbol:rootUnderlying.symbol,role:"Market underlying",relation:null,source:"Pendle market metadata"}];
+ const underlyingPath:Array<{symbol:string;role:string;relation:string|null;source:string}>=[{symbol:rootUnderlying.symbol,role:"Market underlying",relation:null,source:"Pendle market metadata"}];
  let parent=rootUnderlying.symbol;
  resolved.forEach((step,index)=>{add("asset",parent,step.relation,"underlying asset",step.symbol,step.symbol,step.role,index+2,step.source);underlyingPath.push({symbol:step.symbol,role:step.role,relation:step.relation,source:step.source});parent=step.symbol});
  add("market",id,"source_protocol","protocol",protocolIdOf(m),protocolNameOf(m),null,1);
