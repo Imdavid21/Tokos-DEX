@@ -1,0 +1,185 @@
+/* Tokos Data Visualization V2
+   Neutral product chrome, semantic color in data, consistent with institutional research surfaces. */
+:root{
+ --canvas:#f7f8f6;--surface:#ffffff;--surface-2:#f2f4f1;--surface-3:#fafbf9;
+ --text:#111411;--muted:#626a64;--muted-2:#929991;
+ --border:#e2e5e1;--border-strong:#cdd2cc;
+ --tokos:#1e5b40;--tokos-soft:#9bc7ae;--tokos-pale:#e9f2ec;--green:#1e5b40;--green-2:#9bc7ae;--highlight:#e9f2ec;
+ --blue:#446bce;--violet:#7667c9;--amber:#c89032;--coral:#d86652;--cyan:#4f9fa5;--slate:#7a827b;
+ --chart-1:#1e5b40;--chart-2:#446bce;--chart-3:#7667c9;--chart-4:#c89032;--chart-5:#d86652;--chart-6:#4f9fa5;--chart-7:#7a827b;
+ --info:#446bce;--warning:#c89032;--danger:#d86652;--success:#1e5b40;
+ --heat-low:#eef2f0;--heat-mid:#83b89a;--heat-high:#1e5b40;
+ --risk-aaa:#164b35;--risk-aa:#287052;--risk-a:#6c9873;--risk-bbb:#c2a14a;--risk-bb:#d18a3c;--risk-b:#d66d56;--risk-ccc:#b94b4b;
+ --series-1:#1e5b40;--series-2:#446bce;--series-3:#7667c9;--series-4:#c89032;--series-5:#d86652;--series-6:#4f9fa5;--series-7:#7a827b;
+ --grid:#e9ece8;--axis:#909790
+}
+[data-theme="dark"]{
+ --canvas:#0d100e;--surface:#121613;--surface-2:#171c18;--surface-3:#141815;
+ --text:#f1f4f1;--muted:#a2aaa4;--muted-2:#768079;
+ --border:#29312b;--border-strong:#3c463e;
+ --tokos:#86c49e;--tokos-soft:#5e9b76;--tokos-pale:#17261d;--green:#86c49e;--green-2:#5e9b76;--highlight:#17261d;
+ --blue:#7e9ae8;--violet:#a798e7;--amber:#e1b963;--coral:#e78370;--cyan:#72bcc0;--slate:#9aa29c;
+ --chart-1:#86c49e;--chart-2:#7e9ae8;--chart-3:#a798e7;--chart-4:#e1b963;--chart-5:#e78370;--chart-6:#72bcc0;--chart-7:#9aa29c;
+ --info:#7e9ae8;--warning:#e1b963;--danger:#e78370;--success:#86c49e;
+ --heat-low:#1a211d;--heat-mid:#477d5d;--heat-high:#86c49e;
+ --risk-aaa:#8fd0a7;--risk-aa:#75bd92;--risk-a:#9fbe86;--risk-bbb:#d8bd68;--risk-bb:#dfa058;--risk-b:#e48770;--risk-ccc:#e06e6e;
+ --series-1:#86c49e;--series-2:#7e9ae8;--series-3:#a798e7;--series-4:#e1b963;--series-5:#e78370;--series-6:#72bcc0;--series-7:#9aa29c;
+ --grid:#252d27;--axis:#7f8981
+}
+
+/* Product chrome should disappear behind the data. */
+html,body,.main{background:var(--canvas)}
+.topbar,.rail{background:var(--surface)}
+.topbar{box-shadow:0 1px 0 var(--border)}
+.page{max-width:1580px}
+.page-title{font-weight:670;letter-spacing:-.045em}
+.page-sub{color:var(--muted)}
+.panel,.table-wrap,.metrics,.filter-bar,.notice,.state,.dataset-grid,.credit-summary,.methodology-grid,.scenario-controls,.compare-controls,.risk-yield-filters{
+ background:var(--surface);border-color:var(--border);box-shadow:0 1px 2px rgba(15,20,16,.025)
+}
+.panel-head{background:var(--surface);border-bottom-color:var(--border)}
+.panel-title{font-weight:650}
+.panel-note{color:var(--muted-2)}
+.section-title{letter-spacing:-.015em}
+.notice{background:var(--surface-3)}
+.btn.primary{background:var(--tokos);border-color:var(--tokos);color:#fff}
+.btn.primary:hover{background:color-mix(in srgb,var(--tokos) 88%,#000);border-color:color-mix(in srgb,var(--tokos) 88%,#000)}
+.nav-link.active{background:var(--tokos-pale);color:var(--tokos)}
+.brand span{color:var(--tokos)}
+.health-dot{background:var(--tokos)}
+::selection{background:color-mix(in srgb,var(--tokos) 18%,transparent)}
+
+/* Data hierarchy. Color belongs to the information, not the card. */
+.metrics .metric{box-shadow:none!important;border-top:2px solid transparent}
+.metrics .metric:nth-child(7n+1){border-top-color:var(--series-1)}
+.metrics .metric:nth-child(7n+2){border-top-color:var(--series-2)}
+.metrics .metric:nth-child(7n+3){border-top-color:var(--series-3)}
+.metrics .metric:nth-child(7n+4){border-top-color:var(--series-4)}
+.metrics .metric:nth-child(7n+5){border-top-color:var(--series-5)}
+.metrics .metric:nth-child(7n+6){border-top-color:var(--series-6)}
+.metrics .metric:nth-child(7n){border-top-color:var(--series-7)}
+.metric-label,.stat-label,.credit-score-label,.credit-kpi span{color:var(--muted-2)}
+.metric-value,.stat-value{color:var(--text)}
+.positive{color:var(--success)!important}.negative{color:var(--danger)!important}
+
+/* Tables use minimal chrome, strong hover, and colored state only where meaningful. */
+table.data th{background:var(--surface-2);color:var(--muted-2);font-weight:650;border-bottom-color:var(--border)}
+table.data td{background:var(--surface);border-bottom-color:var(--border)}
+table.data tbody tr:hover td{background:color-mix(in srgb,var(--tokos) 3.5%,var(--surface))}
+table.data .identity{color:var(--text)}
+.tag{background:var(--surface-2);border-color:var(--border);color:var(--muted)}
+.stale-tag{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 35%,var(--border));background:color-mix(in srgb,var(--amber) 7%,var(--surface))}
+
+/* Dune-like chart framing: almost invisible container, visible plot. */
+.chart-shell{background:var(--surface);border-color:var(--border)}
+.panel .chart-shell{background:transparent}
+.chart-toolbar{background:var(--surface);border-bottom-color:var(--border)}
+.chart-action{color:var(--muted-2)}
+.chart-action:hover{color:var(--text);background:var(--surface-2)}
+.chart-action.active{color:var(--tokos);background:var(--tokos-pale);border-color:color-mix(in srgb,var(--tokos) 25%,var(--border))}
+.terminal-tab.active{color:var(--tokos);background:var(--tokos-pale)}
+.range-fill,.scenario-fill,.capacity-fill{background:var(--tokos)}
+.scenario-fill.stressed{background:var(--coral)}
+.range-marker{background:var(--text)}
+
+/* Rating colors are semantic, not decorative. */
+.rating{font-weight:720;background:var(--surface-2)}
+.rating.grade-aaa,.rating.aaa{color:var(--risk-aaa)!important;border-color:color-mix(in srgb,var(--risk-aaa) 36%,var(--border));background:color-mix(in srgb,var(--risk-aaa) 7%,var(--surface))}
+.rating.grade-aa,.rating.aa{color:var(--risk-aa)!important;border-color:color-mix(in srgb,var(--risk-aa) 36%,var(--border));background:color-mix(in srgb,var(--risk-aa) 7%,var(--surface))}
+.rating.grade-a,.rating.a{color:var(--risk-a)!important;border-color:color-mix(in srgb,var(--risk-a) 36%,var(--border));background:color-mix(in srgb,var(--risk-a) 7%,var(--surface))}
+.rating.grade-bbb,.rating.bbb{color:var(--risk-bbb)!important;border-color:color-mix(in srgb,var(--risk-bbb) 36%,var(--border));background:color-mix(in srgb,var(--risk-bbb) 7%,var(--surface))}
+.rating.grade-bb,.rating.bb{color:var(--risk-bb)!important;border-color:color-mix(in srgb,var(--risk-bb) 36%,var(--border));background:color-mix(in srgb,var(--risk-bb) 7%,var(--surface))}
+.rating.grade-b,.rating.b{color:var(--risk-b)!important;border-color:color-mix(in srgb,var(--risk-b) 36%,var(--border));background:color-mix(in srgb,var(--risk-b) 7%,var(--surface))}
+.rating.grade-ccc,.rating.ccc{color:var(--risk-ccc)!important;border-color:color-mix(in srgb,var(--risk-ccc) 36%,var(--border));background:color-mix(in srgb,var(--risk-ccc) 7%,var(--surface))}
+.rating.grade-nr,.rating.nr{color:var(--muted)!important}
+
+/* Rating-band summary communicates progression immediately. */
+.rating-scale>div:nth-child(1){box-shadow:inset 0 3px 0 var(--risk-aaa)}
+.rating-scale>div:nth-child(2){box-shadow:inset 0 3px 0 var(--risk-aa)}
+.rating-scale>div:nth-child(3){box-shadow:inset 0 3px 0 var(--risk-a)}
+.rating-scale>div:nth-child(4){box-shadow:inset 0 3px 0 var(--risk-bbb)}
+.rating-scale>div:nth-child(5){box-shadow:inset 0 3px 0 var(--risk-bb)}
+.rating-scale>div:nth-child(6){box-shadow:inset 0 3px 0 var(--risk-b)}
+.rating-scale>div:nth-child(7){box-shadow:inset 0 3px 0 var(--risk-ccc)}
+
+/* Structural semantics. */
+.underlying-step:nth-child(1){box-shadow:inset 0 3px 0 var(--tokos)}
+.underlying-step:nth-child(2){box-shadow:inset 0 3px 0 var(--blue)}
+.underlying-step:nth-child(3){box-shadow:inset 0 3px 0 var(--violet)}
+.underlying-step:nth-child(4){box-shadow:inset 0 3px 0 var(--amber)}
+.dependency-rel{color:var(--muted-2)}
+.risk-observation-row>b{color:var(--tokos)}
+.flow-step span{border-color:var(--border);background:var(--surface-2)}
+.flow-step:nth-child(4n+1) span{border-top:2px solid var(--series-1)}
+.flow-step:nth-child(4n+2) span{border-top:2px solid var(--series-2)}
+.flow-step:nth-child(4n+3) span{border-top:2px solid var(--series-3)}
+.flow-step:nth-child(4n) span{border-top:2px solid var(--series-4)}
+
+/* Dashboard/research surfaces: quieter panels, stronger data labels. */
+.credit-score-card{background:var(--surface)}
+.credit-hero-card{box-shadow:0 1px 2px rgba(15,20,16,.025)}
+.credit-statline strong{color:var(--tokos)}
+.signal-row:nth-child(4n+1){border-left:2px solid var(--series-1)}
+.signal-row:nth-child(4n+2){border-left:2px solid var(--series-2)}
+.signal-row:nth-child(4n+3){border-left:2px solid var(--series-3)}
+.signal-row:nth-child(4n){border-left:2px solid var(--series-4)}
+.methodology-card:nth-child(4n+1){box-shadow:inset 0 2px 0 var(--series-1)}
+.methodology-card:nth-child(4n+2){box-shadow:inset 0 2px 0 var(--series-2)}
+.methodology-card:nth-child(4n+3){box-shadow:inset 0 2px 0 var(--series-3)}
+.methodology-card:nth-child(4n){box-shadow:inset 0 2px 0 var(--series-4)}
+.dataset-row:nth-child(4n+1){box-shadow:inset 2px 0 0 var(--series-1)}
+.dataset-row:nth-child(4n+2){box-shadow:inset 2px 0 0 var(--series-2)}
+.dataset-row:nth-child(4n+3){box-shadow:inset 2px 0 0 var(--series-3)}
+.dataset-row:nth-child(4n){box-shadow:inset 2px 0 0 var(--series-4)}
+
+/* Inputs stay neutral. */
+.input,.select,.scenario-input,.compare-market-grid .select,.compare-options .select,.risk-yield-filters .select{
+ background:var(--surface);border-color:var(--border)
+}
+.input:focus,.select:focus,.scenario-input:focus-within{border-color:color-mix(in srgb,var(--tokos) 58%,var(--border));outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--tokos) 8%,transparent)}
+
+/* Semantic context chips for pages that expose tags. */
+.viz-chip{display:inline-flex;align-items:center;height:21px;padding:0 7px;border-radius:3px;font-size:9px;font-weight:650;border:1px solid var(--border);background:var(--surface-2)}
+.viz-chip.green{color:var(--tokos);border-color:color-mix(in srgb,var(--tokos) 28%,var(--border))}
+.viz-chip.blue{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 28%,var(--border))}
+.viz-chip.violet{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 28%,var(--border))}
+.viz-chip.amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 28%,var(--border))}
+.viz-chip.coral{color:var(--coral);border-color:color-mix(in srgb,var(--coral) 28%,var(--border))}
+
+@media(max-width:700px){
+ .metrics .metric{border-top-width:2px}
+ .rating-scale>div{box-shadow:none}
+ .risk-yield-bands>div{border-left:2px solid var(--border)}
+}
+
+/* Entity identity and surveillance semantics. */
+.entity-link{display:inline-flex;align-items:center;gap:8px}.entity-dot{width:7px;height:7px;border-radius:2px;background:var(--series-1);flex:0 0 auto}
+.entity-protocol .entity-dot{background:var(--series-2)}.entity-chain .entity-dot{background:var(--series-3)}.entity-asset .entity-dot{background:var(--series-1)}
+.dimension-chips{display:flex;gap:5px;flex-wrap:wrap}.severity-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:var(--slate)}
+.severity-low{background:var(--risk-aa)}.severity-moderate{background:var(--risk-bbb)}.severity-elevated{background:var(--risk-bb)}.severity-high,.severity-critical{background:var(--risk-ccc)}
+.rating-history-table td{height:52px}.rating-history-table .mono{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+
+/* Risk/yield band cards retain their grade identity even when filtered. */
+.risk-yield-bands>div:nth-child(1){background:color-mix(in srgb,var(--risk-aaa) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(2){background:color-mix(in srgb,var(--risk-aa) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(3){background:color-mix(in srgb,var(--risk-a) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(4){background:color-mix(in srgb,var(--risk-bbb) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(5){background:color-mix(in srgb,var(--risk-bb) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(6){background:color-mix(in srgb,var(--risk-b) 3%,var(--surface))}
+.risk-yield-bands>div:nth-child(7){background:color-mix(in srgb,var(--risk-ccc) 3%,var(--surface))}
+
+/* Stress test: baseline remains neutral/green, shocked state becomes coral. */
+.scenario-panel:nth-child(1) .scenario-panel-head>strong,.scenario-panel:nth-child(2) .scenario-panel-head>strong{color:var(--coral)}
+.scenario-row:first-of-type .scenario-fill{background:var(--slate)}
+.scenario-row:last-of-type .scenario-fill{background:var(--coral)}
+.scenario-capacity .capacity-fill{background:var(--tokos)}
+
+/* Comparison page uses stable market identity colors in the table as well as charts. */
+.compare-table tbody tr:nth-child(1) td:first-child{box-shadow:inset 3px 0 0 var(--series-1)}
+.compare-table tbody tr:nth-child(2) td:first-child{box-shadow:inset 3px 0 0 var(--series-2)}
+.compare-table tbody tr:nth-child(3) td:first-child{box-shadow:inset 3px 0 0 var(--series-3)}
+.compare-table tbody tr:nth-child(4) td:first-child{box-shadow:inset 3px 0 0 var(--series-4)}
+
+/* Research tables: the primary numeric signal can be picked out without coloring the whole row. */
+.risk-yield-table td:nth-child(5){color:var(--tokos);font-weight:620}
+.risk-yield-table td:nth-child(6){color:var(--blue)}

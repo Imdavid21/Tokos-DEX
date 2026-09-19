@@ -41,7 +41,7 @@ export function TimeChart({series,yFormat="percent",height=300}:{series:Series[]
       tooltip:{trigger:"axis",axisPointer:{type:"cross",label:{backgroundColor:css("--text")}},valueFormatter:format,confine:true},
       legend:{top:0,right:0,itemWidth:14,itemHeight:8,textStyle:{color:css("--muted"),fontSize:11}},
       xAxis:{type:"time",axisLabel:{color:css("--muted"),fontSize:11,hideOverlap:true},axisLine:{lineStyle:{color:css("--border")}},axisPointer:{show:true},splitLine:{show:false}},
-      yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:11,formatter:format,margin:10},splitLine:{lineStyle:{color:css("--border")}},axisLine:{show:false},axisPointer:{show:true}},
+      yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:11,formatter:format,margin:10},splitLine:{lineStyle:{color:css("--grid")}},axisLine:{show:false},axisPointer:{show:true}},
       dataZoom:[{type:"inside",filterMode:"none"},{type:"slider",height:13,bottom:7,borderColor:css("--border"),backgroundColor:"transparent",fillerColor:css("--highlight"),textStyle:{color:css("--muted"),fontSize:10}}],
       series:series.map((s,i)=>({name:s.name,type:"line",showSymbol:false,symbolSize:5,smooth:false,lineStyle:{width:2,color:palette()[i%palette().length]},areaStyle:series.length===1?{opacity:.08,color:palette()[i%palette().length]}:undefined,emphasis:{focus:"series"},connectNulls:false,data:s.data}))
     },true);
@@ -60,7 +60,7 @@ export function CurveChart({points}:{points:Array<{tenorDays:number;fixed:number
     if(!ref.current)return;const chart=echarts.init(ref.current);const format=formatter("percent");const render=()=>chart.setOption({
       animationDuration:220,color:[css("--chart-1"),css("--chart-2")],tooltip:{trigger:"axis",axisPointer:{type:"cross"},valueFormatter:format,confine:true},legend:{top:0,right:0,itemWidth:14,itemHeight:8,textStyle:{color:css("--muted"),fontSize:11}},grid:{left:64,right:24,top:32,bottom:42},
       xAxis:{type:"value",name:"days",nameTextStyle:{color:css("--muted"),fontSize:11},axisLabel:{color:css("--muted"),fontSize:11},axisLine:{lineStyle:{color:css("--border")}},splitLine:{show:false}},
-      yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:11,formatter:format,margin:10},splitLine:{lineStyle:{color:css("--border")}}},
+      yAxis:{type:"value",axisLabel:{color:css("--muted"),fontSize:11,formatter:format,margin:10},splitLine:{lineStyle:{color:css("--grid")}}},
       dataZoom:[{type:"inside",filterMode:"none"}],series:[{name:"Fixed",type:"line",showSymbol:true,symbolSize:6,data:series[0]?.data??[]},{name:"Floating",type:"line",showSymbol:false,data:series[1]?.data??[]}]
     },true);render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
   },[series]);
