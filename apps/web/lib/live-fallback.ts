@@ -1,3 +1,4 @@
+import{resolveUnderlyingPath}from"./underlyings";
 import{chainLabel}from"./chains";
 type Envelope<T>={data:T;meta:{asOf:string;stale:boolean;requestId:string;nextCursor?:string|null;hasMore?:boolean}};
 
@@ -6,6 +7,8 @@ type Token=TokenObject|string;
 type PendleDetails={liquidity?:number|null;totalTvl?:number|null;tradingVolume?:number|null;underlyingApy?:number|null;impliedApy?:number|null};
 type PendleMarket={chainId:string|number;address:string;expiry:string|number;impliedApy?:number|null;underlyingApy?:number|null;tvl?:{usd?:number|null};liquidity?:{usd?:number|null};volume24h?:{usd?:number|null};details?:PendleDetails;pt?:Token;yt?:Token;sy?:Token;underlyingAsset?:Token;name?:string;protocol?:string};
 type Page={total?:number;totalCount?:number;markets?:PendleMarket[];results?:PendleMarket[];data?:{total?:number;totalCount?:number;markets?:PendleMarket[];results?:PendleMarket[]}};
+type AssetMeta={chainId:string|number;address:string;symbol:string;name?:string};
+type AssetPage={assets?:AssetMeta[];data?:{assets?:AssetMeta[]}};
 type HistoricalPoint={timestamp:string;maxApy?:number|null;baseApy?:number|null;underlyingApy?:number|null;impliedApy?:number|null;tvl?:number|null};
 type HistoricalPage={results?:HistoricalPoint[]};
 type MarketHistory={market:PendleMarket;points:HistoricalPoint[]};
@@ -24,7 +27,9 @@ const liquidityOf=(m:PendleMarket)=>num(m.liquidity?.usd)??num(m.details?.liquid
 function pageRows(j:Page){return j.markets??j.results??j.data?.markets??j.data?.results??[]}
 function pageTotal(j:Page){return j.total??j.totalCount??j.data?.total??j.data?.totalCount}
 async function fetchPage(skip:number,limit:number){const r=await fetch(`${PENDLE}/v2/markets/all?limit=${limit}&skip=${skip}`,{headers:{accept:"application/json"},next:{revalidate:60}});if(!r.ok)throw new Error(`Pendle ${r.status}`);return await r.json() as Page}
-async function markets(){const limit=100,first=await fetchPage(0,limit),firstRows=pageRows(first),total=pageTotal(first)??firstRows.length;const offsets=[];for(let skip=limit;skip<total;skip+=limit)offsets.push(skip);const rest=offsets.length?await Promise.all(offsets.map(skip=>fetchPage(skip,limit))):[];const all=[...firstRows,...rest.flatMap(pageRows)],now=Date.now();return all.filter(m=>m?.address&&Number.isFinite(toMs(m.expiry))&&toMs(m.expiry)>now)}
+async function assetMetadata(){try{const r=await fetch(`${PENDLE}/v1/assets/all`,{headers:{accept:"application/json"},next:{revalidate:300}});if(!r.ok)return new Map<string,AssetMeta>();const j=await r.json() as AssetPage,assets=j.assets??j.data?.assets??[];return new Map(assets.map(a=>[`${a.chainId}:${a.address.toLowerCase()}`,a] as const))}catch{return new Map<string,AssetMeta>()}}
+function enrichToken(chainId:string|number,t:Token|undefined,assets:Map<string,AssetMeta>):Token|undefined{if(!t)return t;const raw=typeof t==="string"?t:t.address;if(!raw)return t;const address=raw.includes("-0x")?raw.slice(raw.indexOf("0x")):raw,meta=assets.get(`${chainId}:${address.toLowerCase()}`);if(!meta)return typeof t==="string"?{address}:t;return{...(typeof t==="object"?t:{}),address,symbol:meta.symbol,name:meta.name}}
+async function markets(){const limit=100,first=await fetchPage(0,limit),firstRows=pageRows(first),total=pageTotal(first)??firstRows.length;const offsets=[];for(let skip=limit;skip<total;skip+=limit)offsets.push(skip);const [rest,assets]=await Promise.all([offsets.length?Promise.all(offsets.map(skip=>fetchPage(skip,limit))):[],assetMetadata()]);const all=[...firstRows,...rest.flatMap(pageRows)].map(m=>({...m,pt:enrichToken(m.chainId,m.pt,assets),yt:enrichToken(m.chainId,m.yt,assets),sy:enrichToken(m.chainId,m.sy,assets),underlyingAsset:enrichToken(m.chainId,m.underlyingAsset,assets)})),now=Date.now();return all.filter(m=>m?.address&&Number.isFinite(toMs(m.expiry))&&toMs(m.expiry)>now)}
 function symbolOf(m:PendleMarket){return tokenSymbol(m.underlyingAsset)??tokenSymbol(m.sy)??tokenSymbol(m.pt)?.replace(/^PT-/,"")??m.name?.replace(/^PT[- ]/i,"")??"UNKNOWN"}
 function nameOf(m:PendleMarket){return m.name??tokenSymbol(m.pt)??`Pendle ${symbolOf(m)}`}
 function protocolNameOf(m:PendleMarket){return m.protocol?.trim()||"Pendle"}
@@ -92,14 +97,19 @@ function entityDirectory(rows:PendleMarket[],kind:"asset"|"protocol"|"chain"){
 function tokenMeta(t:Token|undefined){if(typeof t!=="object"||t===null)return null;const symbol=t.symbol?.trim()||t.name?.trim()||null;if(!symbol)return null;return{symbol,name:t.name?.trim()||null,address:t.address?.toLowerCase()||null}}
 function dependencyGraph(m:PendleMarket,asOf:string){
  const id=idOf(m),cid=String(m.chainId),pt=tokenMeta(m.pt),yt=tokenMeta(m.yt),sy=tokenMeta(m.sy),underlying=tokenMeta(m.underlyingAsset),edges:Array<Record<string,unknown>>=[];
- const add=(relationship:string,targetType:string,targetId:string,targetLabel:string,detail:string|null=null)=>edges.push({source_type:"market",source_id:id,relationship,target_type:targetType,target_id:targetId,target_label:targetLabel,detail,exposure_usd:null,weight:null,observed_at:asOf});
- if(pt)add("principal_token","principal token",pt.address??pt.symbol,pt.symbol,pt.name);
- if(yt)add("yield_token","yield token",yt.address??yt.symbol,yt.symbol,yt.name);
- if(sy)add("standardized_yield_wrapper","SY / wrapper",sy.address??sy.symbol,sy.symbol,sy.name);
- if(underlying)add("underlying_asset","underlying asset",underlying.address??underlying.symbol,underlying.symbol,underlying.name);
- add("source_protocol","protocol",protocolIdOf(m),protocolNameOf(m),null);
- add("network","network",cid,chainName(cid),null);
- return{root:{type:"market",id},market:{name:nameOf(m),asset:symbolOf(m),protocol:protocolNameOf(m),network:chainName(cid),maturity:maturityOf(m),tvlUsd:tvlOf(m),liquidityUsd:liquidityOf(m)},edges};
+ const add=(sourceType:string,sourceId:string,relationship:string,targetType:string,targetId:string,targetLabel:string,detail:string|null=null,depth=1,source:string|null=null)=>edges.push({source_type:sourceType,source_id:sourceId,relationship,target_type:targetType,target_id:targetId,target_label:targetLabel,detail,depth,source,exposure_usd:null,weight:null,observed_at:asOf});
+ if(pt)add("market",id,"principal_token","principal token",pt.address??pt.symbol,pt.symbol,pt.name,1);
+ if(yt)add("market",id,"yield_token","yield token",yt.address??yt.symbol,yt.symbol,yt.name,1);
+ if(sy)add("market",id,"standardized_yield_wrapper","SY / wrapper",sy.address??sy.symbol,sy.symbol,sy.name,1);
+ const rootUnderlying=underlying??{symbol:symbolOf(m),name:null,address:null};
+ add("market",id,"underlying_asset","underlying asset",rootUnderlying.address??rootUnderlying.symbol,rootUnderlying.symbol,rootUnderlying.name,1);
+ const resolved=resolveUnderlyingPath({symbol:rootUnderlying.symbol,address:rootUnderlying.address,protocol:protocolNameOf(m),network:chainName(cid)},3);
+ const underlyingPath=[{symbol:rootUnderlying.symbol,role:"Market underlying",relation:null,source:"Pendle market metadata"}];
+ let parent=rootUnderlying.symbol;
+ resolved.forEach((step,index)=>{add("asset",parent,step.relation,"underlying asset",step.symbol,step.symbol,step.role,index+2,step.source);underlyingPath.push({symbol:step.symbol,role:step.role,relation:step.relation,source:step.source});parent=step.symbol});
+ add("market",id,"source_protocol","protocol",protocolIdOf(m),protocolNameOf(m),null,1);
+ add("market",id,"network","network",cid,chainName(cid),null,1);
+ return{root:{type:"market",id},market:{name:nameOf(m),asset:symbolOf(m),protocol:protocolNameOf(m),network:chainName(cid),maturity:maturityOf(m),tvlUsd:tvlOf(m),liquidityUsd:liquidityOf(m)},underlyingPath,edges};
 }
 async function compareLive(rows:PendleMarket[],path:string){
  const u=new URL(path,"https://tokos.local"),ids=(u.searchParams.get("marketIds")??"").split(",").filter(Boolean).slice(0,6),days=Number(u.searchParams.get("days")??90);
