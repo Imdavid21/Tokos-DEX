@@ -11,7 +11,8 @@ const tasks:Task[]=[
  {name:"pendle-history",every:86400000,run:()=>ensurePendleHistory(env),running:false},
  {name:"rollup-refresh",every:86400000,run:()=>refreshHistoricalRollups(env),running:false},
  {name:"pendle-depth",every:7200000,run:()=>ingestPendleDepth(env),running:false},
- {name:"storage-prune",every:86400000,run:()=>services(env).repo.pruneProviderObservations(),running:false},\n {name:"risk-retention",every:86400000,run:()=>enforceRiskRetention(env),running:false},
+ {name:"storage-prune",every:86400000,run:()=>services(env).repo.pruneProviderObservations(),running:false},
+ {name:"risk-retention",every:86400000,run:()=>enforceRiskRetention(env),running:false},
  {name:"risk-intelligence",every:3600000,run:()=>materializeRiskIntelligence(env),running:false}
 ];
 async function execute(task:Task){if(task.running)return;task.running=true;const started=Date.now();console.log(JSON.stringify({level:"info",job:task.name,event:"started"}));try{const result=await task.run();console.log(JSON.stringify({level:"info",job:task.name,event:"completed",durationMs:Date.now()-started,result}))}catch(error){console.error(JSON.stringify({level:"error",job:task.name,event:"failed",durationMs:Date.now()-started,error:error instanceof Error?error.message:String(error)}))}finally{task.running=false}}
