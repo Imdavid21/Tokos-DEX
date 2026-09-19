@@ -6,6 +6,18 @@ import {envelope,finiteOrNull} from "./lib.js";
 
 const entityType=z.enum(["asset","market","protocol","chain","vault","curator","oracle","issuer","bridge","liquidity_venue"]);
 const riskEntityType=z.enum(["asset","market","protocol","chain","vault","curator"]);
+const ratingWeights:Record<string,number>={liquidity:.35,utilization:.25,rate_volatility:.20,price_impact:.20};
+const severityPoints:Record<string,number>={low:100,moderate:75,elevated:45,high:15,critical:0};
+function evidenceRating(observations:Array<{dimension:string;severity:string|null;stale?:boolean}>){
+ let weighted=0,weight=0;const present:string[]=[];let worst="low";
+ const severityRank:Record<string,number>={low:1,moderate:2,elevated:3,high:4,critical:5};
+ for(const o of observations){const w=ratingWeights[o.dimension],p=o.severity?severityPoints[o.severity]:undefined;if(!w||p==null||o.stale)continue;weighted+=w*p;weight+=w;present.push(o.dimension);if((severityRank[o.severity??""]??0)>(severityRank[worst]??0))worst=o.severity!}
+ const coverage=Math.round(weight*100);if(weight<.5)return{rating:"NR",score:null,coverage,worstSeverity:present.length?worst:null,methodologyVersion:"evidence-rating-v1"};
+ const score=weighted/weight;let rating=score>=90?"AAA":score>=82?"AA":score>=72?"A":score>=62?"BBB":score>=50?"BB":score>=35?"B":"CCC";
+ const rank=["CCC","B","BB","BBB","A","AA","AAA"];const cap=worst==="high"||worst==="critical"?"BB":worst==="elevated"?"BBB":null;if(cap&&rank.indexOf(rating)>rank.indexOf(cap))rating=cap;
+ return{rating,score:Number(score.toFixed(1)),coverage,worstSeverity:worst,methodologyVersion:"evidence-rating-v1"};
+}
+
 
 export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
   const db=dbPool(env.DATABASE_URL);
@@ -30,7 +42,7 @@ export async function registerRiskRoutes(app:FastifyInstance,env:ServerEnv){
       GROUP BY lm.id,lm.market_name,lm.asset_symbol,lm.protocol_name,lm.chain_name,lm.liquidity_usd,lm.supply_apr,lm.fixed_apy,lm.implied_apy
       ORDER BY count(r.entity_id) DESC,lm.liquidity_usd DESC NULLS LAST LIMIT $1
     `,[parsed.data.limit]);
-    return envelope(request,rows.rows.map(r=>({...r,liquidity_usd:finiteOrNull(r.liquidity_usd),rate:finiteOrNull(r.rate),observations:r.observations??[]})),
+    return envelope(request,rows.rows.map(r=>{const observations=(r.observations??[]).map((o:any)=>({...o,stale:Boolean(o.stale)}));return{...r,liquidity_usd:finiteOrNull(r.liquidity_usd),rate:finiteOrNull(r.rate),observations,rating:evidenceRating(observations)}}),
       {stale:rows.rows.some(r=>r.risk_stale),asOf:rows.rows.map(r=>r.risk_as_of).filter(Boolean).sort().at(-1)??null});
   });
 
