@@ -16,6 +16,24 @@ const norm=(v:string|undefined|null)=>(v??"").trim().toUpperCase();
 
 const RULES:Rule[]=[
  {
+  symbol:"WSTHYPE",
+  underlying:"STHYPE",
+  relation:"wrapped_representation_of",
+  role:"Rebasing liquid staking token",
+  protocol:"STAKEDHYPE",
+  network:"HYPEREVM",
+  source:"stHYPE SDK and protocol documentation"
+ },
+ {
+  symbol:"STHYPE",
+  underlying:"HYPE",
+  relation:"liquid_staking_backed_by",
+  role:"Native staked asset",
+  protocol:"STAKEDHYPE",
+  network:"HYPEREVM",
+  source:"StakedHYPE institutional documentation"
+ },
+ {
   symbol:"KHYPE",
   underlying:"HYPE",
   relation:"liquid_staking_backed_by",
