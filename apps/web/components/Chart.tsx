@@ -47,7 +47,7 @@ export function TimeChart({series,yFormat="percent",height=300}:{series:Series[]
     },true);
     render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
   },[series,yFormat]);
-  return <ChartFrame label={`Time series chart: ${series.map(s=>s.name).join(", ")}`} onCsv={()=>downloadCsv(`tokos-chart-${id.replace(/:/g,"")}.csv`,series)}><div ref={ref} className="chart" style={{height}} role="img"/></ChartFrame>
+  return <ChartFrame label={`Time series chart: ${series.map(s=>s.name).join(", ")}`} onCsv={()=>downloadCsv(`indenture-chart-${id.replace(/:/g,"")}.csv`,series)}><div ref={ref} className="chart" style={{height}} role="img"/></ChartFrame>
 }
 
 export function CurveChart({points}:{points:Array<{tenorDays:number;fixed:number|null;floating:number|null}>}){
@@ -64,7 +64,7 @@ export function CurveChart({points}:{points:Array<{tenorDays:number;fixed:number
       dataZoom:[{type:"inside",filterMode:"none"}],series:[{name:"Fixed",type:"line",showSymbol:true,symbolSize:6,data:series[0]?.data??[]},{name:"Floating",type:"line",showSymbol:false,data:series[1]?.data??[]}]
     },true);render();const ro=new ResizeObserver(()=>chart.resize());ro.observe(ref.current);const mo=new MutationObserver(render);mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});return()=>{ro.disconnect();mo.disconnect();chart.dispose()}
   },[series]);
-  return <ChartFrame label="Fixed and floating rate curve" onCsv={()=>downloadCsv("tokos-yield-curve.csv",series)}><div ref={ref} className="chart" role="img"/></ChartFrame>
+  return <ChartFrame label="Fixed and floating rate curve" onCsv={()=>downloadCsv("indenture-yield-curve.csv",series)}><div ref={ref} className="chart" role="img"/></ChartFrame>
 }
 
 export function Sparkline({data,format="percent",label="Trend"}:{data:Point[];format?:NumberFormat;label?:string}){

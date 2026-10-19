@@ -1,6 +1,8 @@
 # AGENTS.md
 
-Read this before changing Tokos Data.
+Read this before changing Tokos Data or Indenture.
+
+Indenture is the rating product on top of this platform. Rating engine: `packages/ratings` (deterministic, seeded, tested). Persisted ratings: migration `0012_indenture_ratings.sql` (`rating_runs`, `ratings_latest`, `rating_actions`). Worker job: `apps/worker/src/ratings.ts`, scheduled daily in `direct.ts`. API: `apps/api/src/routes-ratings.ts`. Methodology: `docs/methodology/indenture-psl-v1.md`. The web design system (dark-first, monochrome, Instrument Serif + JetBrains Mono, zero radius, gold only for watch and negative states) lives in `apps/web/app/globals.css`; `credit-v2.css` and `data-viz-v2.css` keep page rules only and must not redefine the palette.
 
 This repository is `Imdavid21/Tokos-DEX`, but the old standalone DEX is decommissioned. The current repository hosts Tokos Data.
 

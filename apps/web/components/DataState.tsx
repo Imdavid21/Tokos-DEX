@@ -13,7 +13,7 @@ export function DataState({kind="unavailable",title,detail,compact=false}:{kind?
   </div>
 }
 
-export function Unavailable({title="Data unavailable",detail="No current normalized observation is available. Tokos does not substitute demo values."}:{title?:string;detail?:string}){
+export function Unavailable({title="Data unavailable",detail="No current normalized observation is available. Indenture does not substitute demo values."}:{title?:string;detail?:string}){
   return <DataState kind="unavailable" title={title} detail={detail}/>;
 }
 

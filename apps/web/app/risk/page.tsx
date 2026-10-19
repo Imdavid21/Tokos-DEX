@@ -1,5 +1,5 @@
 import Link from"next/link";import{maybeApi}from"@/lib/api";import{Unavailable}from"@/components/DataState";import{pct,usd}from"@/lib/format";
-export const metadata={title:"Credit Risk"};
+export const metadata={title:"Evidence ratings"};
 type Methodology={slug:string;name:string;version:string;scope:string;description:string};
 type Obs={dimension:string;metricKey:string;value:number;unit:string;severity:string|null};
 type Rating={rating:string;score:number|null;coverage:number;worstSeverity:string|null;methodologyVersion:string};type RiskMarket={id:string;market_name:string;asset_symbol:string|null;protocol_name:string|null;chain_name:string|null;liquidity_usd:number|null;rate:number|null;observations:Obs[];rating:Rating};
