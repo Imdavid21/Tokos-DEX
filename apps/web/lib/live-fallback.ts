@@ -136,7 +136,7 @@ async function entityRisk(rows:PendleMarket[],kind:EntityKind,id:string){
 }
 function entityDependencies(rows:PendleMarket[],kind:EntityKind,id:string){
  const ms=entityMatches(rows,kind,id);if(!ms.length)return null;
- const outgoing=ms.slice(0,40).map(m=>({relationship:kind==="asset"?"used_by":kind==="protocol"?"operates":"hosts",source_type:kind,source_id:id,target_type:"market",target_id:idOf(m),target_label:nameOf(m),detail:[symbolOf(m),protocolNameOf(m),chainName(String(m.chainId))].join(" · ")}));
+ const outgoing=ms.slice(0,40).map(m=>({relationship:kind==="asset"?"used_by":kind==="protocol"?"operates":"hosts",source_type:kind,source_id:id,target_type:"market",target_id:idOf(m),target_label:nameOf(m),detail:[symbolOf(m),protocolNameOf(m),chainName(String(m.chainId))].join(" | ")}));
  return{outgoing,incoming:[]};
 }
 

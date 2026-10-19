@@ -1,0 +1,56 @@
+# Render Blueprint for Indenture. One web service runs migrations, the Fastify API, the direct worker
+# (ingestion + daily ratings) and the Next.js front end from the repo Dockerfile, plus a managed Postgres.
+# Render Postgres has no TimescaleDB; migrations skip the Timescale rollups and use the plain Postgres fallback views.
+databases:
+  - name: indenture-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: indenture
+    runtime: docker
+    repo: https://github.com/Imdavid21/Tokos-DEX
+    branch: feat/indenture-ratings
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /scale
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: indenture-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: NEXT_PUBLIC_BASE_PATH
+        value: ""
+      - key: PORT
+        value: "3000"
+      - key: API_PORT
+        value: "4000"
+      - key: API_URL
+        value: http://localhost:4000
+      - key: NEXT_PUBLIC_API_URL
+        value: http://localhost:4000
+      - key: APP_URL
+        value: https://indenture.onrender.com
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://indenture.onrender.com
+      - key: ONEDELTA_API_BASE_URL
+        value: https://portal.1delta.io/v1
+      - key: ONEDELTA_API_KEY
+        sync: false
+      - key: PENDLE_API_BASE_URL
+        value: https://api-v2.pendle.finance/core
+      - key: PENDLE_API_KEY
+        sync: false
+      - key: RATINGS_PATHS
+        value: "10000"
+      - key: RATINGS_DRIVER_PATHS
+        value: "2000"
+      - key: LOG_LEVEL
+        value: info

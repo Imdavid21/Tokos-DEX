@@ -1,0 +1,20 @@
+{
+  "name": "@tokos-data/ratings",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Indenture PSL rating engine: deterministic Monte Carlo loss-probability ratings for onchain lending markets.",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.0"
+  }
+}

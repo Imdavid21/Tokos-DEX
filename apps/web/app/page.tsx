@@ -1,4 +1,70 @@
-import Link from"next/link";import{maybeApi}from"@/lib/api";import{pct,usd}from"@/lib/format";import{Unavailable}from"@/components/DataState";
-type Rating={rating:string;score:number|null;coverage:number;worstSeverity:string|null};type RM={id:string;market_name:string;asset_symbol:string|null;protocol_name:string|null;chain_name:string|null;liquidity_usd:number|null;rate:number|null;rating:Rating};type O={summary:{trackedTvl:number|null;liquidity:number|null;activeMarkets:number;assets:number;protocols:number;chains:number}};const grades=["AAA","AA","A","BBB","BB","B","CCC"];
-export default async function Home(){const[risk,overview]=await Promise.all([maybeApi<RM[]>("/risk/markets?limit=500"),maybeApi<O>("/analytics/overview?days=30")]);if(!risk)return <div className="page"><Unavailable title="Credit universe unavailable"/></div>;const rows=risk.data,rated=rows.filter(x=>x.rating.rating!=="NR"),dist=grades.map(g=>({g,n:rated.filter(x=>x.rating.rating===g).length})),watch=rows.filter(x=>["BB","B","CCC"].includes(x.rating.rating)).sort((a,b)=>(a.rating.score??999)-(b.rating.score??999)).slice(0,8),top=rows.filter(x=>["AAA","AA","A","BBB"].includes(x.rating.rating)&&x.rate!=null).sort((a,b)=>(b.rate??0)-(a.rate??0)).slice(0,8),s=overview?.data.summary;return <div className="page"><div className="page-head"><div><h1 className="page-title">Credit Overview</h1><div className="page-sub">Coverage, rating distribution, deterioration signals, and risk-adjusted opportunity discovery across the Tokos onchain credit universe.</div></div><div className="page-meta">Evidence Rating V1 · live observations</div></div><div className="metrics"><M l="Rated markets" v={rated.length.toLocaleString()}/><M l="Tracked markets" v={(s?.activeMarkets??rows.length).toLocaleString()}/><M l="Tracked deposits / TVL" v={usd(s?.trackedTvl??null)}/><M l="Available liquidity" v={usd(s?.liquidity??null)}/><M l="Unrated" v={(rows.length-rated.length).toLocaleString()}/></div><section className="section"><div className="section-bar"><div><h2 className="section-title">Rating distribution</h2><div className="page-sub">One comparable ordinal scale. NR is excluded.</div></div><Link className="btn" href="/risk">All ratings</Link></div><div className="rating-scale">{dist.map(x=><div key={x.g}><b>{x.g}</b><span>{x.n} markets</span></div>)}</div></section><section className="section credit-grid"><P title="Risk watch" link="/rating-history" rows={watch} risk/><P title="Yield within stronger bands" link="/benchmark" rows={top}/></section><section className="section credit-grid"><div className="panel"><div className="panel-head"><span className="panel-title">Risk intelligence</span></div><div className="credit-links"><Link href="/dependencies">Dependency Map <span>→</span></Link><Link href="/scenarios">Stress Testing <span>→</span></Link><Link href="/compare">Compare Ratings <span>→</span></Link><Link href="/alerts">Risk Alerts <span>→</span></Link></div></div><div className="panel"><div className="panel-head"><span className="panel-title">Coverage</span></div><div className="panel-body credit-dimensions"><D a="Assets" b={s?.assets}/><D a="Protocols" b={s?.protocols}/><D a="Networks" b={s?.chains}/><D a="Rated" b={rated.length}/><D a="Markets" b={s?.activeMarkets}/><D a="Methodology" b="V1"/></div></div></section></div>}
-function M({l,v}:{l:string;v:string}){return <div className="metric"><div className="metric-label">{l}</div><div className="metric-value">{v}</div></div>}function D({a,b}:{a:string;b:string|number|undefined}){return <div><b>{a}</b><span>{b??"—"}</span></div>}function P({title,link,rows,risk=false}:{title:string;link:string;rows:RM[];risk?:boolean}){return <div className="panel"><div className="panel-head"><span className="panel-title">{title}</span><Link href={link} className="panel-note">View →</Link></div><div className="table-wrap" style={{border:0}}><table className="data"><thead><tr><th>Rating</th><th>Market</th><th className="num">{risk?"Score":"Yield"}</th><th className="num">{risk?"Coverage":"Liquidity"}</th></tr></thead><tbody>{rows.map(x=><tr key={x.id}><td><span className={"rating grade-"+x.rating.rating.toLowerCase()}>{x.rating.rating}</span></td><td><Link href={"/market/"+encodeURIComponent(x.id)}>{x.asset_symbol??x.market_name}</Link></td><td className="num mono">{risk?(x.rating.score??"—"):pct(x.rate)}</td><td className="num mono">{risk?x.rating.coverage+"%":usd(x.liquidity_usd)}</td></tr>)}</tbody></table></div></div>}
+import Link from "next/link";
+import {maybeApi} from "@/lib/api";
+import {usd} from "@/lib/format";
+import {BANDS,GRADES,gradeClass,psl,signedPct,type Action,type Rating,type Summary} from "@/lib/ratings";
+import {PathField} from "@/components/PathField";
+import {UniverseStrip} from "@/components/UniverseStrip";
+import {Seal} from "@/components/Seal";
+import {CountUp,Reveal} from "@/components/Motion";
+import {Unavailable} from "@/components/DataState";
+import {FrontierChart} from "@/components/FrontierChart";
+
+export const revalidate=60;
+type Frontier=Array<{id:string;name:string|null;assetSymbol:string|null;protocolName:string|null;grade:string;psl:number|null;supplyApy:number|null;riskAdjustedApy:number|null;supplyUsd:number|null}>;
+
+export default async function Home(){
+  const [summary,best,watch,actions,frontier]=await Promise.all([
+    maybeApi<Summary>("/ratings/summary"),
+    maybeApi<Rating[]>("/ratings?investmentGrade=true&sort=riskAdjustedApy&limit=8&minSupplyUsd=1000000"),
+    maybeApi<Rating[]>("/ratings?sort=psl&order=desc&limit=8"),
+    maybeApi<Action[]>("/ratings/actions?limit=12&days=90&action=initiate,upgrade,downgrade,withdraw"),
+    maybeApi<Frontier>("/ratings/frontier")
+  ]);
+  const s=summary?.data;
+  const totalSupply=s?.distribution.reduce((a,d)=>a+(d.supplyUsd??0),0)??0;
+  const moves=(actions?.data??[]).slice(0,10);
+  const ig=s?GRADES.slice(0,4).reduce((a,g)=>a+(s.distribution.find(d=>d.grade===g)?.supplyUsd??0),0):0;
+  return <div className="page">
+    <section className="hero">
+      <div className="hero-copy">
+        <h1 className="hero-title">Every lending market, <i>priced for what it could lose.</i></h1>
+        <p className="hero-sub">Indenture simulates one year of collateral, liquidations and liquidity for every rated market and publishes the probability that a supplier loses more than 1% of principal. Every input is public, every run reproducible, and yield is shown net of expected loss.</p>
+        <div className="hero-actions"><Link className="btn primary" href="/ratings">Explore rated markets</Link><Link className="btn" href="/methodology/indenture-psl-v1">Methodology</Link></div>
+      </div>
+      <PathField/>
+    </section>
+
+    {!s?<section className="section"><Unavailable title="Ratings are not available yet" detail="The rating worker has not completed a run against this database. Nothing is substituted."/></section>:<>
+    <Reveal as="section" className="section"><div className="metrics">
+      <M l="Rated markets" v={<CountUp value={s.graded}/>} m={`${(s.rated-s.graded).toLocaleString()} withheld on coverage`}/>
+      <M l="Rated supply" v={<CountUp value={s.ratedSupplyUsd??0} kind="usd"/>} m={`${totalSupply>0?Math.round((ig/totalSupply)*100):0}% investment grade`}/>
+      <M l="Protocols / networks" v={`${s.protocols} / ${s.chains}`} m={`${s.assets} loan assets`}/>
+      <M l="Watch or negative" v={<CountUp value={s.watch}/>} m="outlook flags" signal={s.watch>0}/>
+      <M l="Grade moves, 30 days" v={<CountUp value={(s.actions30d.upgrade??0)+(s.actions30d.downgrade??0)}/>} m={`${s.actions30d.upgrade??0} up | ${s.actions30d.downgrade??0} down`}/>
+    </div></Reveal>
+
+    <Reveal as="section" className="section"><div className="section-bar"><div><h2 className="section-title"><span className="idx">01</span>The rated universe</h2><div className="page-sub">Every graded market placed on the annual loss probability axis. Tick height follows supply. Hover a tick, click to open the rating.</div></div><Link className="btn" href="/scale">Scale and bands</Link></div>
+      {frontier?.data?.length?<UniverseStrip points={frontier.data}/>:<Unavailable title="No graded markets"/>}
+      <div className="strip-legend" style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:12}}>{[...GRADES,"NR"].map(g=>{const d=s.distribution.find(x=>x.grade===g);if(!d?.markets)return null;const b=BANDS.find(x=>x.grade===g);return <div key={g} style={{display:"flex",alignItems:"center",gap:8}}><span className={`grade ${gradeClass(g)}`}>{g}</span><span className="subtle">{d.markets} | {usd(d.supplyUsd)}{b?` | ${(b.lower*100).toFixed(1)}%${b.upper==null?"+":" to "+(b.upper*100).toFixed(1)+"%"}`:""}</span></div>})}</div>
+    </Reveal>
+
+    <Reveal as="section" className="section"><div className="section-bar"><div><h2 className="section-title"><span className="idx">02</span>Yield against risk</h2><div className="page-sub">Supply APY against annual PSL on a log scale. Up and left is better. Point size is supply.</div></div><Link className="btn" href="/frontier">Open the frontier</Link></div>
+      {frontier?.data?.length?<FrontierChart points={frontier.data} height={340}/>:<Unavailable title="No frontier yet"/>}
+    </Reveal>
+
+    <section className="section grid-2">
+      <Reveal index={0}><Table title="Best net yield, investment grade" note="APY minus expected loss" link="/ratings?investmentGrade=true&sort=riskAdjustedApy" rows={best?.data??[]} col="riskAdjustedApy"/></Reveal>
+      <Reveal index={1}><Table title="Highest loss probability" note="markets to watch" link="/ratings?sort=psl&order=desc" rows={watch?.data??[]} col="psl"/></Reveal>
+    </section>
+
+    <Reveal as="section" className="section"><div className="section-bar"><div><h2 className="section-title"><span className="idx">05</span>Grade changes</h2><div className="page-sub">Initiations, upgrades and downgrades, each with the driver behind it. Outlook moves live on the actions page.</div></div><Link className="btn" href="/actions">All actions</Link></div>
+      <div className="table-wrap"><table className="data"><thead><tr><th>When</th><th>Action</th><th>Market</th><th>Protocol</th><th>From</th><th>To</th><th className="num">PSL</th><th>Reason</th></tr></thead><tbody>{moves.length?moves.map(a=><tr key={a.id}><td className="subtle">{new Date(a.observedAt).toISOString().slice(0,10)}</td><td><span className={`action-pill ${a.action}`}>{a.action}</span></td><td className="identity"><Link href={`/ratings/market/${encodeURIComponent(a.entityId)}`}>{a.market.name??a.entityId}</Link></td><td>{a.market.protocolName??"—"}</td><td>{a.fromGrade?<span className={`grade ${gradeClass(a.fromGrade)}`}>{a.fromGrade}</span>:<span className="subtle">—</span>}</td><td><span className={`grade ${gradeClass(a.toGrade)}`}>{a.toGrade}</span></td><td className="num">{psl(a.toPsl)}</td><td className="subtle" style={{whiteSpace:"normal",maxWidth:460}}>{a.reason}</td></tr>):<tr><td colSpan={8} className="subtle">No grade changes in the window</td></tr>}</tbody></table></div>
+    </Reveal>
+    </>}
+  </div>
+}
+
+function M({l,v,m,signal=false}:{l:string;v:React.ReactNode;m?:string;signal?:boolean}){return <div className="metric"><div className="metric-label">{l}</div><div className="metric-value" style={signal?{color:"var(--ember)"}:undefined}>{v}</div>{m&&<div className="metric-meta">{m}</div>}</div>}
+function Table({title,note,link,rows,col}:{title:string;note:string;link:string;rows:Rating[];col:"riskAdjustedApy"|"psl"}){
+  return <div className="panel"><div className="panel-head"><span className="panel-title">{title}</span><Link href={link} className="panel-note">{note} →</Link></div><div className="table-wrap" style={{border:0,borderRadius:0}}><table className="data" style={{minWidth:0}}><thead><tr><th>Grade</th><th>Market</th><th className="num">APY</th><th className="num">{col==="psl"?"PSL":"Net yield"}</th></tr></thead><tbody>{rows.length?rows.map(r=><tr key={r.entityId}><td><Seal grade={r.grade} psl={r.psl}/></td><td className="identity"><Link href={`/ratings/market/${encodeURIComponent(r.entityId)}`}>{r.market.name}</Link><span className="subtle" style={{display:"block"}}>{r.market.chainName} | <span className={`outlook ${r.outlook}`}>{r.outlook}</span></span></td><td className="num">{signedPct(r.supplyApy)}</td><td className="num">{col==="psl"?psl(r.psl):signedPct(r.riskAdjustedApy)}</td></tr>):<tr><td colSpan={4} className="subtle">No rows</td></tr>}</tbody></table></div></div>
+}
