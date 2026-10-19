@@ -27,7 +27,6 @@ export default async function Home(){
   return <div className="page">
     <section className="hero">
       <div className="hero-copy">
-        <div className="hero-kicker">Open loss-probability ratings</div>
         <h1 className="hero-title">Every lending market, <i>priced for what it could lose.</i></h1>
         <p className="hero-sub">Indenture simulates one year of collateral, liquidations and liquidity for every rated market and publishes the probability that a supplier loses more than 1% of principal. Every input is public, every run reproducible, and yield is shown net of expected loss.</p>
         <div className="hero-actions"><Link className="btn primary" href="/ratings">Explore rated markets</Link><Link className="btn" href="/methodology/indenture-psl-v1">Methodology</Link></div>
@@ -41,12 +40,12 @@ export default async function Home(){
       <M l="Rated supply" v={<CountUp value={s.ratedSupplyUsd??0} kind="usd"/>} m={`${totalSupply>0?Math.round((ig/totalSupply)*100):0}% investment grade`}/>
       <M l="Protocols / networks" v={`${s.protocols} / ${s.chains}`} m={`${s.assets} loan assets`}/>
       <M l="Watch or negative" v={<CountUp value={s.watch}/>} m="outlook flags" signal={s.watch>0}/>
-      <M l="Grade moves, 30 days" v={<CountUp value={(s.actions30d.upgrade??0)+(s.actions30d.downgrade??0)}/>} m={`${s.actions30d.upgrade??0} up · ${s.actions30d.downgrade??0} down`}/>
+      <M l="Grade moves, 30 days" v={<CountUp value={(s.actions30d.upgrade??0)+(s.actions30d.downgrade??0)}/>} m={`${s.actions30d.upgrade??0} up | ${s.actions30d.downgrade??0} down`}/>
     </div></Reveal>
 
     <Reveal as="section" className="section"><div className="section-bar"><div><h2 className="section-title"><span className="idx">01</span>The rated universe</h2><div className="page-sub">Every graded market placed on the annual loss probability axis. Tick height follows supply. Hover a tick, click to open the rating.</div></div><Link className="btn" href="/scale">Scale and bands</Link></div>
       {frontier?.data?.length?<UniverseStrip points={frontier.data}/>:<Unavailable title="No graded markets"/>}
-      <div className="strip-legend" style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:12}}>{[...GRADES,"NR"].map(g=>{const d=s.distribution.find(x=>x.grade===g);if(!d?.markets)return null;const b=BANDS.find(x=>x.grade===g);return <div key={g} style={{display:"flex",alignItems:"center",gap:8}}><span className={`grade ${gradeClass(g)}`}>{g}</span><span className="subtle">{d.markets} · {usd(d.supplyUsd)}{b?` · ${(b.lower*100).toFixed(1)}%${b.upper==null?"+":" to "+(b.upper*100).toFixed(1)+"%"}`:""}</span></div>})}</div>
+      <div className="strip-legend" style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:12}}>{[...GRADES,"NR"].map(g=>{const d=s.distribution.find(x=>x.grade===g);if(!d?.markets)return null;const b=BANDS.find(x=>x.grade===g);return <div key={g} style={{display:"flex",alignItems:"center",gap:8}}><span className={`grade ${gradeClass(g)}`}>{g}</span><span className="subtle">{d.markets} | {usd(d.supplyUsd)}{b?` | ${(b.lower*100).toFixed(1)}%${b.upper==null?"+":" to "+(b.upper*100).toFixed(1)+"%"}`:""}</span></div>})}</div>
     </Reveal>
 
     <Reveal as="section" className="section"><div className="section-bar"><div><h2 className="section-title"><span className="idx">02</span>Yield against risk</h2><div className="page-sub">Supply APY against annual PSL on a log scale. Up and left is better. Point size is supply.</div></div><Link className="btn" href="/frontier">Open the frontier</Link></div>
@@ -54,8 +53,8 @@ export default async function Home(){
     </Reveal>
 
     <section className="section grid-2">
-      <Reveal index={0}><Table title="03 · Best net yield, investment grade" note="APY minus expected loss" link="/ratings?investmentGrade=true&sort=riskAdjustedApy" rows={best?.data??[]} col="riskAdjustedApy"/></Reveal>
-      <Reveal index={1}><Table title="04 · Highest loss probability" note="markets to watch" link="/ratings?sort=psl&order=desc" rows={watch?.data??[]} col="psl"/></Reveal>
+      <Reveal index={0}><Table title="Best net yield, investment grade" note="APY minus expected loss" link="/ratings?investmentGrade=true&sort=riskAdjustedApy" rows={best?.data??[]} col="riskAdjustedApy"/></Reveal>
+      <Reveal index={1}><Table title="Highest loss probability" note="markets to watch" link="/ratings?sort=psl&order=desc" rows={watch?.data??[]} col="psl"/></Reveal>
     </section>
 
     <Reveal as="section" className="section"><div className="section-bar"><div><h2 className="section-title"><span className="idx">05</span>Grade changes</h2><div className="page-sub">Initiations, upgrades and downgrades, each with the driver behind it. Outlook moves live on the actions page.</div></div><Link className="btn" href="/actions">All actions</Link></div>
@@ -67,5 +66,5 @@ export default async function Home(){
 
 function M({l,v,m,signal=false}:{l:string;v:React.ReactNode;m?:string;signal?:boolean}){return <div className="metric"><div className="metric-label">{l}</div><div className="metric-value" style={signal?{color:"var(--ember)"}:undefined}>{v}</div>{m&&<div className="metric-meta">{m}</div>}</div>}
 function Table({title,note,link,rows,col}:{title:string;note:string;link:string;rows:Rating[];col:"riskAdjustedApy"|"psl"}){
-  return <div className="panel"><div className="panel-head"><span className="panel-title">{title}</span><Link href={link} className="panel-note">{note} →</Link></div><div className="table-wrap" style={{border:0,borderRadius:0}}><table className="data" style={{minWidth:0}}><thead><tr><th>Grade</th><th>Market</th><th className="num">APY</th><th className="num">{col==="psl"?"PSL":"Net yield"}</th></tr></thead><tbody>{rows.length?rows.map(r=><tr key={r.entityId}><td><Seal grade={r.grade} psl={r.psl}/></td><td className="identity"><Link href={`/ratings/market/${encodeURIComponent(r.entityId)}`}>{r.market.name}</Link><span className="subtle" style={{display:"block"}}>{r.market.chainName} · <span className={`outlook ${r.outlook}`}>{r.outlook}</span></span></td><td className="num">{signedPct(r.supplyApy)}</td><td className="num">{col==="psl"?psl(r.psl):signedPct(r.riskAdjustedApy)}</td></tr>):<tr><td colSpan={4} className="subtle">No rows</td></tr>}</tbody></table></div></div>
+  return <div className="panel"><div className="panel-head"><span className="panel-title">{title}</span><Link href={link} className="panel-note">{note} →</Link></div><div className="table-wrap" style={{border:0,borderRadius:0}}><table className="data" style={{minWidth:0}}><thead><tr><th>Grade</th><th>Market</th><th className="num">APY</th><th className="num">{col==="psl"?"PSL":"Net yield"}</th></tr></thead><tbody>{rows.length?rows.map(r=><tr key={r.entityId}><td><Seal grade={r.grade} psl={r.psl}/></td><td className="identity"><Link href={`/ratings/market/${encodeURIComponent(r.entityId)}`}>{r.market.name}</Link><span className="subtle" style={{display:"block"}}>{r.market.chainName} | <span className={`outlook ${r.outlook}`}>{r.outlook}</span></span></td><td className="num">{signedPct(r.supplyApy)}</td><td className="num">{col==="psl"?psl(r.psl):signedPct(r.riskAdjustedApy)}</td></tr>):<tr><td colSpan={4} className="subtle">No rows</td></tr>}</tbody></table></div></div>
 }

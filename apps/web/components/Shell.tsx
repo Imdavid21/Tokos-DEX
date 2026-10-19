@@ -12,7 +12,7 @@ export async function Shell({children}:{children:React.ReactNode}){const summary
       <Link href="/" className="brand" aria-label="Indenture overview"><span className="brand-mark" aria-hidden="true"/><b>Indenture</b><span>ratings</span></Link>
       <Search/>
       <div className="top-actions">
-        <div className="health" title={live?`${summary?.data.graded} graded markets`:"Ratings unavailable"}><span className={`health-dot ${live?(demo?"stale":""):"offline"}`}/>{live?`${summary?.data.graded.toLocaleString()} rated${demo?" · demo":""}`:"Ratings offline"}</div>
+        <div className="health" title={live?`${summary?.data.graded} graded markets`:"Ratings unavailable"}><span className={`health-dot ${live?(demo?"stale":""):"offline"}`}/>{live?`${summary?.data.graded.toLocaleString()} rated${demo?" | demo":""}`:"Ratings offline"}</div>
         <ThemeToggle/>
       </div>
     </header>

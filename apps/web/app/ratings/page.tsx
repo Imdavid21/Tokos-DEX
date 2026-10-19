@@ -17,14 +17,14 @@ export default async function RatingsPage({searchParams}:{searchParams:Promise<S
   const rows=res?.data??[];
   const protocols=[...new Set(rows.map(r=>r.market.protocolName).filter(Boolean))].sort() as string[];
   return <div className="page">
-    <div className="page-head"><div><h1 className="page-title">Rated <i>markets</i></h1><div className="page-sub">Every graded lending market with its annual probability of significant loss, expected loss and yield net of expected loss. Click a row for the drivers, inputs and the run that produced it.</div></div><div className="page-meta">{rows.length} rows · {res?.meta.asOf?new Date(res.meta.asOf).toISOString().slice(0,16).replace("T"," ")+" UTC":"—"} · <a href={`${process.env.NEXT_PUBLIC_BASE_PATH??""}/api/v1/ratings/export.csv`} className="btn" style={{height:26}}>CSV</a></div></div>
+    <div className="page-head"><div><h1 className="page-title">Rated <i>markets</i></h1><div className="page-sub">Every graded lending market with its annual probability of significant loss, expected loss and yield net of expected loss. Click a row for the drivers, inputs and the run that produced it.</div></div><div className="page-meta">{rows.length} rows | {res?.meta.asOf?new Date(res.meta.asOf).toISOString().slice(0,16).replace("T"," ")+" UTC":"—"} | <a href={`${process.env.NEXT_PUBLIC_BASE_PATH??""}/api/v1/ratings/export.csv`} className="btn" style={{height:26}}>CSV</a></div></div>
     <RatingsFilters current={params} protocols={protocols}/>
     {!res?<Unavailable title="Ratings unavailable"/>:rows.length===0?<div className="state"><div><h2>No markets match</h2><p>Loosen the grade, protocol or supply filters.</p></div></div>:
     <div className="table-wrap"><table className="data"><thead><tr><th>Grade</th><th>Outlook</th><th>Market</th><th>Protocol</th><th>Network</th><th className="num">Supply</th><th className="num">APY</th><th className="num">PSL</th><th className="num">95% CI</th><th className="num">Exp. loss</th><th className="num">Net yield</th><th>Top driver</th><th className="num">Coverage</th></tr></thead><tbody>
       {rows.map(r=><tr key={r.entityId}>
         <td><Seal grade={r.grade} psl={r.psl}/></td>
         <td><span className={`outlook ${r.outlook}`}>{r.outlook}</span></td>
-        <td className="identity"><Link href={`/ratings/market/${encodeURIComponent(r.entityId)}`}>{r.market.name}</Link><span className="subtle" style={{display:"block"}}>{r.market.assetSymbol} · {r.market.rateType}</span></td>
+        <td className="identity"><Link href={`/ratings/market/${encodeURIComponent(r.entityId)}`}>{r.market.name}</Link><span className="subtle" style={{display:"block"}}>{r.market.assetSymbol} | {r.market.rateType}</span></td>
         <td>{r.market.protocolName??"—"}</td><td>{r.market.chainName??"—"}</td>
         <td className="num">{usd(r.market.supplyUsd)}</td>
         <td className="num">{signedPct(r.supplyApy)}</td>
