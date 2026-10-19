@@ -74,7 +74,12 @@ export interface SimulationResult {
   histogram: Array<{ from: number; to: number; count: number }>;
   /** Share of significant-loss paths attributable to each channel (first cause on the path). */
   channels: { market: number; collateralStructural: number; loanStructural: number; protocol: number };
+  /** A fixed sample of paths for visualization: collateral/loan ratio and cumulative loss at 13 monthly checkpoints. */
+  samplePaths: Array<{ ratio: number[]; loss: number[]; significant: boolean }>;
 }
+
+export const SAMPLE_PATHS = 48;
+export const SAMPLE_CHECKPOINTS = 13;
 
 export const STRESS_DAYS = 30;
 export const GAS_HAIRCUT = 0.002;
@@ -130,6 +135,9 @@ export function simulate(m: MarketInputs, o: SimulationOptions): SimulationResul
     collateral0[b] = debt[b]! / ltv;
   }
   const losses = new Float64Array(o.paths);
+  const samplePaths: SimulationResult["samplePaths"] = [];
+  const sampleEvery = Math.max(1, Math.floor(o.paths / SAMPLE_PATHS));
+  const checkpointEvery = Math.max(1, Math.round(horizon / (SAMPLE_CHECKPOINTS - 1)));
   const channelCount = { market: 0, collateralStructural: 0, loanStructural: 0, protocol: 0 };
   const vol = m.process.vol;
   const dailyVol = vol * sqrtDt;
@@ -147,6 +155,9 @@ export function simulate(m: MarketInputs, o: SimulationOptions): SimulationResul
     const collStructDay = rng.next() < pCollStruct ? Math.floor(rng.next() * horizon) : -1;
     const loanStructDay = rng.next() < pLoanStruct ? Math.floor(rng.next() * horizon) : -1;
     const protocolDay = rng.next() < pProtocol ? Math.floor(rng.next() * horizon) : -1;
+    const sampled = p % sampleEvery === 0 && samplePaths.length < SAMPLE_PATHS;
+    const ratioTrack: number[] = sampled ? [1] : [];
+    const lossTrack: number[] = sampled ? [0] : [];
 
     for (let d = 0; d < horizon; d++) {
       const stressed = stressLeft > 0;
@@ -193,9 +204,20 @@ export function simulate(m: MarketInputs, o: SimulationOptions): SimulationResul
         loss += m.protocolLgd;
         if (!firstChannel) firstChannel = "protocol";
       }
+      if (sampled && (d + 1) % checkpointEvery === 0 && ratioTrack.length < SAMPLE_CHECKPOINTS) {
+        ratioTrack.push(ratio);
+        lossTrack.push(Math.min(1, loss));
+      }
       if (loss >= 1) break;
     }
     const capped = Math.min(1, loss);
+    if (sampled) {
+      while (ratioTrack.length < SAMPLE_CHECKPOINTS) {
+        ratioTrack.push(ratio);
+        lossTrack.push(capped);
+      }
+      samplePaths.push({ ratio: ratioTrack.map((x) => Math.round(x * 1e4) / 1e4), loss: lossTrack.map((x) => Math.round(x * 1e5) / 1e5), significant: capped > LOSS_THRESHOLD });
+    }
     losses[p] = capped;
     if (capped > LOSS_THRESHOLD && firstChannel) channelCount[firstChannel]++;
   }
@@ -235,6 +257,7 @@ export function simulate(m: MarketInputs, o: SimulationOptions): SimulationResul
     pslHigh: ci.high,
     quantiles: { p50: q(0.5), p90: q(0.9), p95: q(0.95), p99: q(0.99), max: sorted[sorted.length - 1]! },
     histogram,
+    samplePaths,
     channels: {
       market: channelCount.market / totalChannel,
       collateralStructural: channelCount.collateralStructural / totalChannel,

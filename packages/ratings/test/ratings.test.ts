@@ -115,6 +115,16 @@ describe("simulation primitives", () => {
     expect(r.histogram.reduce((a, b) => a + b.count, 0)).toBe(2000);
     expect(r.quantiles.max).toBeLessThanOrEqual(1);
   });
+  it("captures a fixed sample of paths at monthly checkpoints", () => {
+    const r = simulate(base, { paths: 2000, seed: 3 });
+    expect(r.samplePaths.length).toBe(48);
+    for (const p of r.samplePaths) {
+      expect(p.ratio.length).toBe(13);
+      expect(p.loss.length).toBe(13);
+      expect(p.ratio[0]).toBe(1);
+      expect(p.loss[0]).toBe(0);
+    }
+  });
 });
 
 describe("rateMarket", () => {
@@ -147,6 +157,12 @@ describe("rateMarket", () => {
     expect(a.psl).toBe(b.psl);
     const built = buildInputs(facts({ observedVol: 0.9 }));
     expect(built.records.find((x) => x.key === "ratio_volatility")?.source).toBe("observed");
+  });
+  it("holds the previous grade on small moves near a band edge", () => {
+    const f = facts({ collateralSymbol: "WETH", lltv: 0.86 });
+    const a = rateMarket(f, { paths: 3000, driverPaths: 300 });
+    const nudged = rateMarket(facts({ collateralSymbol: "WETH", lltv: 0.862 }), { paths: 3000, driverPaths: 300, previous: { grade: a.grade, psl: a.psl } });
+    expect(nudged.grade).toBe(a.grade);
   });
   it("sets outlook from the previous rating", () => {
     const prev = rateMarket(facts(), { paths: 2000, driverPaths: 500 });

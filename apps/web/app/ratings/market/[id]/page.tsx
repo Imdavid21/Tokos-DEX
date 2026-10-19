@@ -5,10 +5,13 @@ import {usd} from "@/lib/format";
 import {BANDS,gradeClass,psl,signedPct,type Rating} from "@/lib/ratings";
 import {TimeChart} from "@/components/Chart";
 import {WhatIf} from "@/components/WhatIf";
+import {Seal} from "@/components/Seal";
+import {FanChart} from "@/components/FanChart";
+import {Reveal} from "@/components/Motion";
 
 type Driver={key:string;label:string;pslContribution:number;share:number;detail:string};
 type Input={key:string;value:number|string;unit:string;source:"observed"|"prior"|"derived";note?:string};
-type Detail=Rating&{run:{id:string|null;seed:string|null;paths:number|null;inputsHash:string|null;durationMs:number|null;inputs:{records:Input[];archetypes:{collateral:string;loan:string}}|null;drivers:Driver[];simulation:{quantiles:{p50:number;p90:number;p95:number;p99:number;max:number};histogram:Array<{from:number;to:number;count:number}>;channels:Record<string,number>}|null;limitations:string[]};history:Array<{computedAt:string;grade:string;psl:number|null;pslLow:number|null;pslHigh:number|null;expectedLoss:number|null;riskAdjustedApy:number|null}>;actions:Array<{id:string;action:string;fromGrade:string|null;toGrade:string;notches:number;reason:string;observedAt:string}>;dependencies:Array<{relationship:string;targetType:string;targetId:string}>};
+type Detail=Rating&{run:{id:string|null;seed:string|null;paths:number|null;inputsHash:string|null;durationMs:number|null;inputs:{records:Input[];archetypes:{collateral:string;loan:string}}|null;drivers:Driver[];simulation:{quantiles:{p50:number;p90:number;p95:number;p99:number;max:number};histogram:Array<{from:number;to:number;count:number}>;channels:Record<string,number>;samplePaths?:Array<{ratio:number[];loss:number[];significant:boolean}>}|null;limitations:string[]};history:Array<{computedAt:string;grade:string;psl:number|null;pslLow:number|null;pslHigh:number|null;expectedLoss:number|null;riskAdjustedApy:number|null}>;actions:Array<{id:string;action:string;fromGrade:string|null;toGrade:string;notches:number;reason:string;observedAt:string}>;dependencies:Array<{relationship:string;targetType:string;targetId:string}>};
 
 export async function generateMetadata({params}:{params:Promise<{id:string}>}){const {id}=await params;return{title:`Rating · ${decodeURIComponent(id)}`}}
 
@@ -26,7 +29,7 @@ export default async function RatingDetail({params}:{params:Promise<{id:string}>
     <div className="page-head"><div><div className="label" style={{marginBottom:10}}><Link href="/ratings">Rated markets</Link> / {m.protocolName} / {m.chainName}</div><h1 className="page-title">{m.name}</h1><div className="page-sub">{m.assetSymbol} {m.rateType} market on {m.protocolName}, {m.chainName}. Rated under {r.methodologyVersion} from {run.paths?.toLocaleString()} simulated one-year paths, seed {run.seed}, inputs hash {run.inputsHash}.</div></div><div className="page-meta">Computed {r.computedAt?new Date(r.computedAt).toISOString().slice(0,16).replace("T"," "):"—"} UTC · <Link href={`/market/${encodeURIComponent(m.id)}`} className="btn" style={{height:26}}>Market data</Link></div></div>
 
     <div className="rating-card">
-      <div className="rating-card-grade"><span className="label">Indenture grade</span><span className={`grade lg ${gradeClass(r.grade)}`}>{r.grade}</span><span className={`outlook ${r.outlook}`}>Outlook {r.outlook}</span>{band&&<div><div className="band-track"><i style={{left:`${logPos(band.lower)*100}%`,width:`${(logPos(band.upper??1)-logPos(band.lower))*100}%`,opacity:.25}}/><b style={{left:`calc(${logPos(r.psl??0)*100}% - 1px)`}}/></div><div className="band-scale"><span>0.05%</span><span>1%</span><span>10%</span><span>100%</span></div></div>}</div>
+      <div className="rating-card-grade"><span className="label">Indenture grade</span><Seal grade={r.grade} psl={r.psl} large/><span className={`outlook ${r.outlook}`}>Outlook {r.outlook}</span>{band&&<div><div className="band-track"><i style={{left:`${logPos(band.lower)*100}%`,width:`${(logPos(band.upper??1)-logPos(band.lower))*100}%`,opacity:.25}}/><b style={{left:`calc(${logPos(r.psl??0)*100}% - 1px)`}}/></div><div className="band-scale"><span>0.05%</span><span>1%</span><span>10%</span><span>100%</span></div></div>}</div>
       <div className="rating-card-kpis">
         <div><span className="label">Annual PSL</span><strong>{psl(r.psl)}</strong><span className="subtle">95% CI {psl(r.pslLow)} to {psl(r.pslHigh)}</span></div>
         <div><span className="label">Expected loss</span><strong>{r.expectedLoss==null?"—":`${(r.expectedLoss*1e4).toFixed(0)} bp`}</strong><span className="subtle">LGD {psl(r.lgd,1)} given loss</span></div>
@@ -34,6 +37,8 @@ export default async function RatingDetail({params}:{params:Promise<{id:string}>
         <div><span className="label">Net yield</span><strong className={r.riskAdjustedApy!=null&&r.riskAdjustedApy<0?"signal":""}>{signedPct(r.riskAdjustedApy)}</strong><span className="subtle">APY minus expected loss</span></div>
       </div>
     </div>
+
+    {run.simulation?.samplePaths?.length?<Reveal as="section" className="section"><div className="panel"><div className="panel-head"><span className="panel-title">00 · A year of simulated paths</span><span className="panel-note">{run.simulation.samplePaths.length} of {run.paths?.toLocaleString()} paths, collateral to loan ratio, monthly checkpoints</span></div><div className="panel-body"><FanChart paths={run.simulation.samplePaths} lltvRatioFloor={lltvFloor(inputs)}/><div className="fan-note"><span>Bone: paths that end the year without a significant loss</span><span style={{color:"var(--ember)"}}>Ember: paths where suppliers lost more than 1%</span></div></div></div></Reveal>:null}
 
     <section className="section grid-2">
       <div className="panel"><div className="panel-head"><span className="panel-title">01 · What drives the rating</span><span className="panel-note">PSL removed if the channel were benign</span></div><div className="panel-body">{run.drivers.length?run.drivers.map(d=><div className="driver" key={d.key}><div className="driver-name">{d.label}</div><div className="driver-bar"><i style={{width:`${Math.max(1,d.share*100)}%`}}/></div><div className="driver-val">{(d.pslContribution*100).toFixed(2)} pp · {(d.share*100).toFixed(0)}%</div></div>):<span className="subtle">No driver decomposition stored</span>}</div></div>
@@ -58,5 +63,7 @@ export default async function RatingDetail({params}:{params:Promise<{id:string}>
     <div className="notice" style={{marginTop:24}}>Independent assessment. Not financial advice. Ratings are model outputs over published inputs and are comparable only within one methodology version.</div>
   </div>
 }
+/** Ratio at which the riskiest borrower bucket (0.96 of LLTV) reaches the liquidation threshold. */
+function lltvFloor(inputs:Input[]){const lltv=numberInput(inputs,"liquidation_ltv");return lltv?0.96:null}
 function numberInput(inputs:Input[],key:string){const v=inputs.find(x=>x.key===key)?.value;return typeof v==="number"?v:null}
 function fmt(v:number,unit:string){if(unit==="USD")return usd(v);if(unit==="ratio"||unit==="fraction"||unit==="annual"||unit==="annualized")return v<0.01?`${(v*100).toFixed(3)}%`:`${(v*100).toFixed(2)}%`;if(unit==="days")return v.toFixed(2);if(unit==="per year")return v.toFixed(2);if(unit==="log drop")return v.toFixed(2);return String(v)}

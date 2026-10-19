@@ -1,6 +1,6 @@
 import { ARCHETYPES, classifyAsset, familyPairJumps, familyPairVol, type Archetype } from "./archetypes.js";
 import { fnv1a, stableStringify } from "./rng.js";
-import { bandFor, gradeForPsl, notchDelta, type Grade, type Outlook, METHODOLOGY_VERSION } from "./scale.js";
+import { bandFor, gradeForPsl, gradeRank, notchDelta, type Grade, type Outlook, METHODOLOGY_VERSION } from "./scale.js";
 import { DEFAULT_BUCKETS, simulate, type MarketInputs, type SimulationResult } from "./simulate.js";
 
 /** Observed facts about a lending market. Null means not observed; the engine substitutes a published prior. */
@@ -38,7 +38,7 @@ export interface RatingOptions {
   paths?: number;
   driverPaths?: number;
   seed?: number;
-  previous?: { grade: Grade; psl: number } | null;
+  previous?: { grade: Grade; psl: number; outlook?: Outlook } | null;
 }
 
 export interface Driver {
@@ -70,6 +70,8 @@ export interface RatingOutput {
   expectedLoss: number;
   riskAdjustedApy: number | null;
   coverage: number;
+  /** True when the stability rule kept the previous grade although the point estimate sits in another band. */
+  stabilityHeld: boolean;
   band: ReturnType<typeof bandFor>;
   drivers: Driver[];
   inputs: InputRecord[];
@@ -83,6 +85,8 @@ export interface RatingOutput {
 
 const COVERAGE_WEIGHTS = { lltv: 0.2, utilization: 0.15, supply: 0.15, depth: 0.2, volatility: 0.2, protocolPd: 0.1 } as const;
 export const COVERAGE_FLOOR = 0.5;
+/** Share of the previous band width the point estimate must clear before a grade changes. */
+export const STABILITY_MARGIN = 0.15;
 export const DEFAULT_PATHS = 20000;
 export const DEFAULT_DRIVER_PATHS = 4000;
 export const PRIORS = {
@@ -269,7 +273,25 @@ export function rateMarket(facts: MarketFacts, options: RatingOptions = {}): Rat
   for (const d of drivers) d.detail = `${(d.pslContribution * 100).toFixed(2)} pp of PSL if this channel were benign`;
 
   const coverageOk = built.coverage >= COVERAGE_FLOOR;
-  const grade: Grade = coverageOk ? gradeForPsl(sim.psl) : "NR";
+  let grade: Grade = coverageOk ? gradeForPsl(sim.psl) : "NR";
+  let stabilityHeld = false;
+  // Grade stability rule: a published grade moves only when the point estimate clears the previous band by
+  // STABILITY_MARGIN of that band's width and the 95% interval no longer overlaps the previous band on that side.
+  const previousGrade = options.previous?.grade;
+  if (coverageOk && previousGrade && previousGrade !== "NR" && previousGrade !== grade) {
+    const prevBand = bandFor(previousGrade);
+    if (prevBand) {
+      const width = Math.min(prevBand.upperPsl, 1) - prevBand.lowerPsl;
+      const worse = gradeRank(grade) > gradeRank(previousGrade);
+      const clears = worse
+        ? sim.psl >= prevBand.upperPsl + STABILITY_MARGIN * width && sim.pslLow >= prevBand.upperPsl
+        : sim.psl < prevBand.lowerPsl - STABILITY_MARGIN * width && sim.pslHigh < prevBand.lowerPsl;
+      if (!clears) {
+        grade = previousGrade;
+        stabilityHeld = true;
+      }
+    }
+  }
   let outlook: Outlook = "stable";
   if (grade !== "NR") {
     const previous = options.previous ?? null;
@@ -278,11 +300,24 @@ export function rateMarket(facts: MarketFacts, options: RatingOptions = {}): Rat
       const notches = notchDelta(previous.grade, grade);
       if (notches < 0) outlook = "negative";
       else if (notches > 0) outlook = "positive";
-      else if (sim.psl > previous.psl * 1.25 && sim.psl - previous.psl > 0.001) outlook = "negative";
-      else if (sim.psl < previous.psl * 0.75 && previous.psl - sim.psl > 0.001) outlook = "positive";
+      else {
+        // A directional outlook needs a move that is both material (25% and 0.1 pp) and larger than the interval width.
+        const delta = sim.psl - previous.psl;
+        const width = sim.pslHigh - sim.pslLow;
+        if (delta > 0 && sim.psl > previous.psl * 1.25 && delta > Math.max(0.001, width)) outlook = "negative";
+        else if (delta < 0 && sim.psl < previous.psl * 0.75 && -delta > Math.max(0.001, width)) outlook = "positive";
+      }
     }
     const band = bandFor(grade);
-    if (band && outlook === "stable" && sim.pslHigh >= band.upperPsl && topDriver && topDriver.key !== "protocol") outlook = "watch";
+    if (stabilityHeld) outlook = gradeRank(gradeForPsl(sim.psl)) > gradeRank(grade) ? "watch" : "positive";
+    else if (band && outlook === "stable" && sim.pslHigh >= band.upperPsl && topDriver && topDriver.key !== "protocol") outlook = "watch";
+    // Outlooks are sticky: a non-stable outlook clears only once the estimate sits inside the band by the stability margin.
+    const prevOutlook = options.previous?.outlook;
+    if (band && outlook === "stable" && prevOutlook && prevOutlook !== "stable" && options.previous?.grade === grade) {
+      const width = Math.min(band.upperPsl, 1) - band.lowerPsl;
+      const inside = sim.psl >= band.lowerPsl + STABILITY_MARGIN * width && sim.pslHigh < band.upperPsl + STABILITY_MARGIN * width;
+      if (!inside) outlook = prevOutlook;
+    }
   }
   const riskAdjustedApy = facts.supplyApy != null && Number.isFinite(facts.supplyApy) && grade !== "NR" ? facts.supplyApy - sim.expectedLoss : null;
 
@@ -298,6 +333,7 @@ export function rateMarket(facts: MarketFacts, options: RatingOptions = {}): Rat
     expectedLoss: sim.expectedLoss,
     riskAdjustedApy,
     coverage: built.coverage,
+    stabilityHeld,
     band: bandFor(grade),
     drivers,
     inputs: built.records,

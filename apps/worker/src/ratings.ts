@@ -58,13 +58,13 @@ export async function materializeRatings(env:ServerEnv,options:{paths?:number;dr
     };
     const prev=previous.get(m.id)??null;
     const t=Date.now();
-    const out=rateMarket(facts,{paths,driverPaths,previous:prev?{grade:prev.grade,psl:prev.psl}:null});
+    const out=rateMarket(facts,{paths,driverPaths,previous:prev?{grade:prev.grade,psl:prev.psl,outlook:prev.outlook}:null});
     const run=await db.query(`
       INSERT INTO rating_runs(entity_type,entity_id,methodology_version,grade,outlook,psl,psl_low,psl_high,lgd,expected_loss,supply_apy,risk_adjusted_apy,coverage,seed,paths,inputs_hash,inputs,drivers,simulation,limitations,duration_ms)
       VALUES('market',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17::jsonb,$18::jsonb,$19::jsonb,$20) RETURNING id,computed_at
     `,[m.id,out.methodologyVersion,out.grade,out.outlook,out.psl,out.pslLow,out.pslHigh,out.lgd,out.expectedLoss,facts.supplyApy,out.riskAdjustedApy,out.coverage,out.seed,out.paths,out.inputsHash,
       JSON.stringify({records:out.inputs,archetypes:out.archetypes,facts}),JSON.stringify(out.drivers),
-      JSON.stringify({psl:out.psl,pslLow:out.pslLow,pslHigh:out.pslHigh,lgd:out.lgd,expectedLoss:out.expectedLoss,quantiles:out.simulation.quantiles,histogram:out.simulation.histogram,channels:out.simulation.channels,band:out.band}),
+      JSON.stringify({psl:out.psl,pslLow:out.pslLow,pslHigh:out.pslHigh,lgd:out.lgd,expectedLoss:out.expectedLoss,quantiles:out.simulation.quantiles,histogram:out.simulation.histogram,channels:out.simulation.channels,samplePaths:out.simulation.samplePaths,band:out.band}),
       JSON.stringify(out.limitations),Date.now()-t]);
     const runId=run.rows[0].id,computedAt=run.rows[0].computed_at;
     await db.query(`

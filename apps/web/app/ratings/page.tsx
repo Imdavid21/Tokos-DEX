@@ -1,9 +1,10 @@
 import Link from "next/link";
 import {maybeApi,qs} from "@/lib/api";
 import {usd} from "@/lib/format";
-import {GRADES,gradeClass,psl,signedPct,type Rating} from "@/lib/ratings";
+import {GRADES,psl,signedPct,type Rating} from "@/lib/ratings";
 import {Unavailable} from "@/components/DataState";
 import {RatingsFilters} from "@/components/RatingsFilters";
+import {Seal} from "@/components/Seal";
 
 export const metadata={title:"Rated markets"};
 type Search=Record<string,string|string[]|undefined>;
@@ -21,7 +22,7 @@ export default async function RatingsPage({searchParams}:{searchParams:Promise<S
     {!res?<Unavailable title="Ratings unavailable"/>:rows.length===0?<div className="state"><div><h2>No markets match</h2><p>Loosen the grade, protocol or supply filters.</p></div></div>:
     <div className="table-wrap"><table className="data"><thead><tr><th>Grade</th><th>Outlook</th><th>Market</th><th>Protocol</th><th>Network</th><th className="num">Supply</th><th className="num">APY</th><th className="num">PSL</th><th className="num">95% CI</th><th className="num">Exp. loss</th><th className="num">Net yield</th><th>Top driver</th><th className="num">Coverage</th></tr></thead><tbody>
       {rows.map(r=><tr key={r.entityId}>
-        <td><span className={`grade ${gradeClass(r.grade)}`}>{r.grade}</span></td>
+        <td><Seal grade={r.grade} psl={r.psl}/></td>
         <td><span className={`outlook ${r.outlook}`}>{r.outlook}</span></td>
         <td className="identity"><Link href={`/ratings/market/${encodeURIComponent(r.entityId)}`}>{r.market.name}</Link><span className="subtle" style={{display:"block"}}>{r.market.assetSymbol} · {r.market.rateType}</span></td>
         <td>{r.market.protocolName??"—"}</td><td>{r.market.chainName??"—"}</td>
