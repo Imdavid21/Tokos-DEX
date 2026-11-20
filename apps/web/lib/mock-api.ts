@@ -11,7 +11,7 @@ const markets=data.markets as unknown as Array<Market&{grade:string;outlook:stri
 type RawAction={id:string;entityId:string;action:string;observedAt:string;notches:number;fromGrade:string;toGrade:string;fromPsl:number;toPsl:number}&Record<string,unknown>;
 // A PSL shown next to a grade must sit inside that grade's band. Clamp stored values so the table never contradicts the scale.
 const inBand=(grade:string,psl:number)=>{const b=BANDS.find(x=>x.grade===grade);if(!b)return psl;const hi=b.upper??b.lower*1.5+0.001;if(psl>=b.lower&&psl<hi)return psl;return Math.round(((b.lower+hi)/2)*100000)/100000};
-const actions=(data.actions as unknown as RawAction[]).map(a=>({...a,fromPsl:inBand(a.fromGrade,a.fromPsl),toPsl:inBand(a.toGrade,a.toPsl)})) as RawAction[];
+const actions=(data.actions as unknown as RawAction[]).map(a=>{const f=inBand(a.fromGrade,a.fromPsl),t=inBand(a.toGrade,a.toPsl);const pct=(x:number)=>`${(x*100).toFixed(2)}%`;const reason=typeof a.reason==="string"?a.reason.replace(/PSL [\d.]+% to [\d.]+%/,`PSL ${pct(f)} to ${pct(t)}`):a.reason;return{...a,fromPsl:f,toPsl:t,reason}}) as RawAction[];
 // Demo data is a fixed snapshot, so time windows are measured from when it was generated, not from today.
 const NOW=()=>new Date(data.generatedAt).getTime();
 export const MOCK_GENERATED_AT=data.generatedAt;
