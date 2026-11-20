@@ -2,7 +2,7 @@ import{test,expect}from"@playwright/test";
 
 test("research flow works with live normalized data",async({page,request})=>{
  await page.goto("/");
- await expect(page.locator("header")).toContainText("tokos");
+ await expect(page.locator("header")).toContainText(/indenture/i);
  await expect(page.getByRole("heading",{name:"Overview",exact:true})).toBeVisible();
 
  await page.getByRole("button",{name:/Search markets, assets, protocols/i}).click();

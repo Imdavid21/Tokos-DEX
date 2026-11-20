@@ -12,7 +12,7 @@ const pages=["/","/markets","/rates?asset=usdc&notional=100000&horizon=90","/yie
 for(const viewport of viewports)for(const theme of["light","dark"] as const){
  test(`visual QA ${viewport.name} ${theme}`,async({page},testInfo)=>{
   await page.setViewportSize({width:viewport.width,height:viewport.height});
-  await page.addInitScript(value=>localStorage.setItem("tokos-data-theme",value),theme);
+  await page.addInitScript(value=>localStorage.setItem("indenture-theme",value),theme);
   for(const route of pages){
    await page.goto(route);
    await expect(page.locator("header")).toBeVisible();
