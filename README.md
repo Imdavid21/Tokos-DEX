@@ -2,10 +2,11 @@
 
 Open loss probability ratings for onchain credit. Indenture computes a daily, reproducible Probability of Significant Loss (PSL) for every rated onchain lending market, grades it from AAA to D, and shows yield net of expected loss, with every input public.
 
-Live: https://indenture-one.vercel.app
+Live data: https://tokos-dex-production.up.railway.app
+Demo universe: https://indenture-one.vercel.app
 Source: https://github.com/Imdavid21/Tokos-DEX (the repository keeps its original name; the product was formerly called Tokos)
 
-The live site runs on a precomputed demonstration universe. The ratings engine is the real one, but the market set is illustrative and labelled as demo data on every page. Connecting the API and ingestion workers below switches it to live observations.
+The Railway deployment runs the full stack (ingestion workers, PostgreSQL, API and web) on live 1delta and Pendle data. Markets show NR until they meet the 50% input coverage floor in the methodology, so a freshly started database lists live supply, APY and PSL estimates before any grade is published. The Vercel site runs on a precomputed demonstration universe: the ratings engine is the real one, but the market set is illustrative and labelled as demo data on every page.
 
 ## What is in it
 
