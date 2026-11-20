@@ -8,7 +8,12 @@ import {BANDS,GRADES,INVESTMENT_GRADE} from "./ratings";
 type Envelope<T>={data:T;meta:{asOf:string;stale:boolean;requestId:string;nextCursor?:string|null;hasMore?:boolean;demo?:boolean}};
 type Market=(typeof data.markets)[number];
 const markets=data.markets as unknown as Array<Market&{grade:string;outlook:string;psl:number;pslLow:number;pslHigh:number;expectedLoss:number;supplyApy:number|null;riskAdjustedApy:number|null;coverage:number;computedAt:string;market:{id:string;name:string;protocolSlug:string;protocolId:string;chainId:string;assetSymbol:string;assetId:string;protocolName:string;chainName:string;supplyUsd:number;liquidityUsd:number}}>;
-const actions=data.actions as Array<{id:string;entityId:string;action:string;observedAt:string;notches:number;toGrade:string;toPsl:number}&Record<string,unknown>>;
+type RawAction={id:string;entityId:string;action:string;observedAt:string;notches:number;fromGrade:string;toGrade:string;fromPsl:number;toPsl:number}&Record<string,unknown>;
+// A PSL shown next to a grade must sit inside that grade's band. Clamp stored values so the table never contradicts the scale.
+const inBand=(grade:string,psl:number)=>{const b=BANDS.find(x=>x.grade===grade);if(!b)return psl;const hi=b.upper??b.lower*1.5+0.001;if(psl>=b.lower&&psl<hi)return psl;return Math.round(((b.lower+hi)/2)*100000)/100000};
+const actions=(data.actions as unknown as RawAction[]).map(a=>({...a,fromPsl:inBand(a.fromGrade,a.fromPsl),toPsl:inBand(a.toGrade,a.toPsl)})) as RawAction[];
+// Demo data is a fixed snapshot, so time windows are measured from when it was generated, not from today.
+const NOW=()=>new Date(data.generatedAt).getTime();
 export const MOCK_GENERATED_AT=data.generatedAt;
 export const isMockForced=()=>process.env.MOCK_RATINGS==="1"||process.env.NEXT_PUBLIC_MOCK_RATINGS==="1";
 
@@ -21,12 +26,12 @@ export function mockApi<T>(path:string):Envelope<T>|null{
   const u=new URL(path,"https://indenture.local");const p=u.pathname;const q=u.searchParams;
   if(p==="/ratings/scale")return env({methodologyVersion:"indenture-psl-v1",lossThreshold:0.01,horizonDays:365,investmentGrade:INVESTMENT_GRADE,bands:BANDS.map(b=>({grade:b.grade,label:b.label,lowerPsl:b.lower,upperPsl:b.upper}))} as T);
   if(p==="/ratings/summary"){
-    const graded=markets.filter(m=>m.grade!=="NR");const since=Date.now()-30*86400000;
+    const graded=markets.filter(m=>m.grade!=="NR");const since=NOW()-30*86400000;
     const distribution=[...GRADES,"NR"].map(g=>{const rows=markets.filter(m=>m.grade===g);return{grade:g,markets:rows.length,supplyUsd:rows.reduce((a,m)=>a+(m.market.supplyUsd??0),0),avgPsl:rows.length?rows.reduce((a,m)=>a+m.psl,0)/rows.length:null,avgRiskAdjustedApy:rows.length?rows.reduce((a,m)=>a+(m.riskAdjustedApy??0),0)/rows.length:null}});
     const actions30d=actions.filter(a=>new Date(a.observedAt).getTime()>=since).reduce<Record<string,number>>((acc,a)=>{acc[a.action]=(acc[a.action]??0)+1;return acc},{});
     return env({methodologyVersion:"indenture-psl-v1",rated:markets.length,graded:graded.length,protocols:new Set(markets.map(m=>m.market.protocolSlug)).size,chains:new Set(markets.map(m=>m.market.chainId)).size,assets:new Set(markets.map(m=>m.market.assetSymbol)).size,ratedSupplyUsd:markets.reduce((a,m)=>a+(m.market.supplyUsd??0),0),watch:markets.filter(m=>m.outlook==="watch"||m.outlook==="negative").length,distribution,actions30d} as T);
   }
-  if(p==="/ratings/actions"){const limit=Number(q.get("limit")??50),days=Number(q.get("days")??90),filter=q.get("action")?.split(",");const since=Date.now()-days*86400000;return env(actions.filter(a=>new Date(a.observedAt).getTime()>=since&&(!filter||filter.includes(a.action))).slice(0,limit) as T)}
+  if(p==="/ratings/actions"){const limit=Number(q.get("limit")??50),days=Number(q.get("days")??90),filter=q.get("action")?.split(",");const since=NOW()-days*86400000;return env(actions.filter(a=>new Date(a.observedAt).getTime()>=since&&(!filter||filter.includes(a.action))).slice(0,limit) as T)}
   if(p==="/ratings/frontier")return env(markets.filter(m=>m.grade!=="NR"&&m.supplyApy!=null).sort(SORTS.riskAdjustedApy!).map(m=>({id:m.entityId,name:m.market.name,assetSymbol:m.market.assetSymbol,protocolName:m.market.protocolName,chainName:m.market.chainName,grade:m.grade,psl:m.psl,supplyApy:m.supplyApy,expectedLoss:m.expectedLoss,riskAdjustedApy:m.riskAdjustedApy,supplyUsd:m.market.supplyUsd})) as T);
   if(p==="/ratings"){
     let rows=[...markets];

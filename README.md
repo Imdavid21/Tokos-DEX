@@ -1,30 +1,30 @@
-# Indenture (Tokos Data)
+# Indenture
 
-Indenture is the open loss-probability rating product built on the Tokos Data platform: a daily, reproducible Probability of Significant Loss for every rated onchain lending market, graded AAA to D, with every input public and yield shown net of expected loss. The rating engine lives in `packages/ratings`, the worker job in `apps/worker/src/ratings.ts`, the API under `/v1/ratings`, and the methodology in `docs/methodology/indenture-psl-v1.md`.
+Open loss probability ratings for onchain credit. Indenture computes a daily, reproducible Probability of Significant Loss (PSL) for every rated onchain lending market, grades it from AAA to D, and shows yield net of expected loss, with every input public.
 
-`Imdavid21/Tokos-DEX` is now the Tokos Data repository. The former standalone DEX runtime is not present in the current tree; legacy code exists only in git history.
+Live: https://indenture-one.vercel.app
+Source: https://github.com/Imdavid21/Tokos-DEX (the repository keeps its original name; the product was formerly called Tokos)
 
-Agents must read [`AGENTS.md`](AGENTS.md) first, then `docs/KNOWLEDGE_TRANSFER.md` and `docs/TOKOS_DATA_MASTER_SPEC.md`. The canonical cross-project handoff is maintained in `Imdavid21/tokos/docs/FULL_KNOWLEDGE_TRANSFER_2026-09-12.md`.
+The live site runs on a precomputed demonstration universe. The ratings engine is the real one, but the market set is illustrative and labelled as demo data on every page. Connecting the API and ingestion workers below switches it to live observations.
 
-Tokos Data is a standalone onchain rates and yield intelligence platform. Tokos V2 is not imported or modified.
+## What is in it
 
-Rating routes: `/` (rated universe), `/ratings` (screener), `/ratings/market/:id` (grade, drivers, inputs, what-if, history), `/actions`, `/frontier`, `/scale`, `/methodology/indenture-psl-v1`.
+- Overview with the rated universe by grade, yield against risk, highest PSL markets and recent rating actions.
+- Screener at `/ratings` and a detail page per market with grade, drivers, inputs, what-if and history.
+- Rating actions, risk adjusted yield frontier, the grade scale and the published methodology (`/methodology/indenture-psl-v1`).
+- Dependency map, stress testing, rate comparison, yield curve and basis views.
 
-Legacy data routes include `/markets`, `/market/:id`, `/assets`, `/asset/:slug`, `/protocols`, `/protocol/:slug`, `/chains`, `/chain/:slug`, `/rates`, `/yield-curve`, `/basis`, `/execution`, `/correlations`, `/compare`, `/datasets`, and `/metrics`.
-
-Architecture:
+## Architecture
 
 ```text
-providers
--> ingestion/workers
--> PostgreSQL/Timescale normalized observations
--> Fastify API/read models
--> Next.js web
+providers (1delta, Pendle)
+-> ingestion workers
+-> PostgreSQL / Timescale observations
+-> Fastify API and ratings engine
+-> Next.js web (apps/web)
 ```
 
-Redis/BullMQ are used where configured. Production analytics should prefer normalized persisted observations. The web contains an explicitly labelled live Pendle fallback for resilience when the Data API/database is unavailable; it does not fabricate missing observations.
-
-Public production is exposed at `https://tokos.fun/data` through the main `tokos-web` reverse proxy. The Data web runtime deploys independently in the dedicated Railway project `tokos-data`, currently at `https://tokos-data-production.up.railway.app`.
+Packages: `apps/web` (Next.js), `apps/api` (Fastify), `apps/worker` (ingestion), `packages/*` (shared engine and types). Details are in `docs/KNOWLEDGE_TRANSFER.md` and `docs/TOKOS_DATA_MASTER_SPEC.md`.
 
 ## Local
 

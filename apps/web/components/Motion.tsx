@@ -10,7 +10,7 @@ export function Reveal({children,index=0,as:Tag="div",className=""}:{children:Re
 /** Counts a formatted number up from zero on mount. */
 function fmt(kind:"int"|"usd",v:number){if(kind==="int")return Math.round(v).toLocaleString();const a=Math.abs(v);if(a>=1e9)return `$${(v/1e9).toFixed(a>=1e10?1:2)}B`;if(a>=1e6)return `$${(v/1e6).toFixed(a>=1e7?1:2)}M`;if(a>=1e3)return `$${(v/1e3).toFixed(1)}K`;return `$${v.toFixed(0)}`}
 export function CountUp({value,kind="int",duration=900}:{value:number;kind?:"int"|"usd";duration?:number}){
-  const [v,setV]=useState(0);
-  useEffect(()=>{const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;let raf=0;const t0=performance.now();const tick=(t:number)=>{const p=reduced?1:Math.min(1,(t-t0)/duration);setV(value*(1-Math.pow(1-p,3)));if(p<1)raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf)},[value,duration]);
+  const [v,setV]=useState(value);
+  useEffect(()=>{const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;if(reduced){setV(value);return}let raf=0;const t0=performance.now();const tick=(t:number)=>{const p=reduced?1:Math.min(1,(t-t0)/duration);setV(value*(1-Math.pow(1-p,3)));if(p<1)raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf)},[value,duration]);
   return <>{fmt(kind,v)}</>;
 }
